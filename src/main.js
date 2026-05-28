@@ -624,6 +624,3 @@ function stopAnimation() {
 
 // Initialize on load
 emulator = new TC002Emulator();
-
-// Auto-start rainbow demo
-setTimeout(() => startAnimation('rainbow'), 500);
