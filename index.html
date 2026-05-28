@@ -41,6 +41,12 @@
             width: 100%;
         }
 
+        .left-panel {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
         .led-matrix {
             display: grid;
             grid-template-columns: repeat(52, 1fr);
@@ -58,6 +64,82 @@
             border-radius: 1px;
             background: #0f0f1a;
             transition: background-color 0.05s ease;
+        }
+
+        /* Hardware Status Panel */
+        .hw-status {
+            background: #1a1a2e;
+            border-radius: 6px;
+            padding: 12px;
+            font-size: 11px;
+        }
+
+        .hw-status .title {
+            color: #888;
+            font-size: 10px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 10px;
+        }
+
+        .hw-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 4px 0;
+            border-bottom: 1px solid #2a2a4e;
+        }
+
+        .hw-row:last-child {
+            border-bottom: none;
+        }
+
+        .hw-label {
+            color: #666;
+        }
+
+        .hw-value {
+            color: #e0e0e0;
+        }
+
+        .hw-value.on {
+            color: #4ade80;
+        }
+
+        .hw-value.error {
+            color: #ef4444;
+        }
+
+        .hw-indicator {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #333;
+            margin-right: 6px;
+        }
+
+        .hw-indicator.on {
+            background: #4ade80;
+            box-shadow: 0 0 6px #4ade80;
+        }
+
+        .hw-indicator.error {
+            background: #ef4444;
+            box-shadow: 0 0 6px #ef4444;
+        }
+
+        .mic-bar {
+            width: 80px;
+            height: 6px;
+            background: #2a2a4e;
+            border-radius: 3px;
+            overflow: hidden;
+        }
+
+        .mic-bar-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #4ade80, #f59e0b);
+            transition: width 0.1s;
         }
 
         .controls {
@@ -199,15 +281,60 @@
 </head>
 <body>
     <h1>TC002 Emulator</h1>
-    <div class="subtitle">52×16 RGB LED Matrix</div>
+    <div class="subtitle">52×16 RGB LED Matrix with Hardware Status</div>
 
     <div class="container">
-        <div class="led-matrix" id="matrix"></div>
+        <div class="left-panel">
+            <div class="led-matrix" id="matrix"></div>
+
+            <!-- Hardware Status -->
+            <div class="hw-status">
+                <div class="title">Hardware Status</div>
+                <div class="hw-row">
+                    <span class="hw-label">MCU</span>
+                    <span class="hw-value">
+                        <span class="hw-indicator" id="mcuIndicator"></span>
+                        <span id="mcuStatus">Connected</span>
+                    </span>
+                </div>
+                <div class="hw-row">
+                    <span class="hw-label">MCU Ver</span>
+                    <span class="hw-value" id="mcuVersion">v1.0.2</span>
+                </div>
+                <div class="hw-row">
+                    <span class="hw-label">WiFi</span>
+                    <span class="hw-value">
+                        <span class="hw-indicator on" id="wifiIndicator"></span>
+                        <span class="on" id="wifiStatus">Connected</span>
+                    </span>
+                </div>
+                <div class="hw-row">
+                    <span class="hw-label">BLE</span>
+                    <span class="hw-value">
+                        <span class="hw-indicator" id="bleIndicator"></span>
+                        <span id="bleStatus">Advertising</span>
+                    </span>
+                </div>
+                <div class="hw-row">
+                    <span class="hw-label">MIC Level</span>
+                    <span class="hw-value">
+                        <div class="mic-bar">
+                            <div class="mic-bar-fill" id="micBar" style="width: 0%"></div>
+                        </div>
+                        <span id="micValue">0%</span>
+                    </span>
+                </div>
+                <div class="hw-row">
+                    <span class="hw-label">Knob</span>
+                    <span class="hw-value" id="knobStatus">Idle</span>
+                </div>
+            </div>
+        </div>
 
         <div class="controls">
             <!-- Text -->
             <div class="panel">
-                <div class="panel-title">Text</div>
+                <div class="panel-title">Text Display</div>
                 <div class="row">
                     <input type="text" id="textInput" placeholder="Text..." value="HELLO">
                     <select id="textColor">
@@ -228,7 +355,7 @@
 
             <!-- Image -->
             <div class="panel">
-                <div class="panel-title">Image</div>
+                <div class="panel-title">Image Display</div>
                 <div class="drop-zone" id="dropZone">
                     Drop image or click
                 </div>
@@ -242,7 +369,7 @@
 
             <!-- Effects -->
             <div class="panel">
-                <div class="panel-title">Effects</div>
+                <div class="panel-title">Effects & Animation</div>
                 <div class="slider-group">
                     <label><span>Brightness</span><span id="brightnessValue">100%</span></label>
                     <input type="range" id="brightness" min="10" max="200" value="100">
@@ -257,11 +384,13 @@
                 </div>
             </div>
 
-            <!-- Info -->
+            <!-- Hardware Simulation -->
             <div class="panel">
-                <div class="status">
-                    <strong>TC002:</strong> 52×16 RGB LED, Z21 Linux SoC, Wi-Fi + BLE<br>
-                    <span id="statusText">Ready</span>
+                <div class="panel-title">Hardware Simulation</div>
+                <div class="row">
+                    <button onclick="window.emulator.simulateMic()">Test MIC</button>
+                    <button onclick="window.emulator.toggleWifi()">Toggle WiFi</button>
+                    <button onclick="window.emulator.toggleBle()">Toggle BLE</button>
                 </div>
             </div>
         </div>

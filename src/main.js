@@ -1,4 +1,4 @@
-// TC002 Emulator
+// TC002 Emulator with Hardware Status Simulation
 
 const WIDTH = 52;
 const HEIGHT = 16;
@@ -32,8 +32,18 @@ class TC002Emulator {
         this.animationId = null;
         this.brightness = 1.0;
 
+        // Hardware state
+        this.hwState = {
+            mcu: { connected: true, version: 'v1.0.2' },
+            wifi: { connected: true },
+            ble: { advertising: true },
+            mic: { level: 0, enabled: false },
+            knob: { state: 'idle' }
+        };
+
         this.initMatrix();
         this.initControls();
+        this.updateHwStatus();
         this.render();
     }
 
@@ -99,6 +109,96 @@ class TC002Emulator {
                     this.displayText('static');
                 }
             });
+        }
+    }
+
+    // Hardware simulation methods
+    simulateMic() {
+        this.hwState.mic.enabled = !this.hwState.mic.enabled;
+        if (this.hwState.mic.enabled) {
+            // Animate MIC level
+            let time = 0;
+            const animate = () => {
+                if (!this.hwState.mic.enabled) {
+                    this.updateHwStatus();
+                    return;
+                }
+                time += 0.1;
+                const level = Math.abs(Math.sin(time)) * 100;
+                this.hwState.mic.level = Math.floor(level);
+                this.updateHwStatus();
+                requestAnimationFrame(() => setTimeout(animate, 100));
+            };
+            animate();
+        }
+    }
+
+    toggleWifi() {
+        this.hwState.wifi.connected = !this.hwState.wifi.connected;
+        // BLE depends on WiFi
+        if (!this.hwState.wifi.connected) {
+            this.hwState.ble.advertising = false;
+        }
+        this.updateHwStatus();
+    }
+
+    toggleBle() {
+        if (this.hwState.wifi.connected) {
+            this.hwState.ble.advertising = !this.hwState.ble.advertising;
+        }
+        this.updateHwStatus();
+    }
+
+    updateHwStatus() {
+        // MCU
+        const mcuInd = document.getElementById('mcuIndicator');
+        const mcuStatus = document.getElementById('mcuStatus');
+        if (mcuInd && mcuStatus) {
+            if (this.hwState.mcu.connected) {
+                mcuInd.className = 'hw-indicator on';
+                mcuStatus.textContent = 'Connected';
+                mcuStatus.className = 'hw-value on';
+            } else {
+                mcuInd.className = 'hw-indicator error';
+                mcuStatus.textContent = 'Disconnected';
+                mcuStatus.className = 'hw-value error';
+            }
+        }
+
+        // WiFi
+        const wifiInd = document.getElementById('wifiIndicator');
+        const wifiStatus = document.getElementById('wifiStatus');
+        if (wifiInd && wifiStatus) {
+            if (this.hwState.wifi.connected) {
+                wifiInd.className = 'hw-indicator on';
+                wifiStatus.textContent = 'Connected';
+                wifiStatus.className = 'on';
+            } else {
+                wifiInd.className = 'hw-indicator';
+                wifiStatus.textContent = 'Disconnected';
+                wifiStatus.className = '';
+            }
+        }
+
+        // BLE
+        const bleInd = document.getElementById('bleIndicator');
+        const bleStatus = document.getElementById('bleStatus');
+        if (bleInd && bleStatus) {
+            if (this.hwState.ble.advertising) {
+                bleInd.className = 'hw-indicator on';
+                bleStatus.textContent = 'Advertising';
+            } else {
+                bleInd.className = 'hw-indicator';
+                bleStatus.textContent = this.hwState.wifi.connected ? 'Off' : 'N/A (WiFi off)';
+            }
+        }
+
+        // MIC
+        const micBar = document.getElementById('micBar');
+        const micValue = document.getElementById('micValue');
+        if (micBar && micValue) {
+            micBar.style.width = this.hwState.mic.level + '%';
+            micValue.textContent = this.hwState.mic.level + '%';
         }
     }
 
@@ -215,11 +315,11 @@ class TC002Emulator {
 
     blinkText(color) {
         const rgb = this.hexToRgb(color);
-        const text = document.getElementById('textInput')?.value || 'HELLO';
         let visible = true;
 
         const blink = () => {
             if (visible) {
+                const textInput = document.getElementById('textInput');
                 this.displayText('static');
             } else {
                 this.matrix.fill({ r: 0, g: 0, b: 0 });
