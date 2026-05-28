@@ -28,33 +28,37 @@ const FONT_3x5 = {
 
 class TC002Emulator {
     constructor() {
-        this.matrix = new Array(TOTAL_PIXELS).fill(null).map(() => ({ r: 0, g: 0, b: 0 }));
-        this.ledElements = [];
-        this.animationId = null;
-        this.brightness = 1.0;
-        this.dialRotation = 0;
-        
-        // WS and Frame metrics
-        this.socket = null;
-        this.frameCounter = 0;
-        this.lastFrameTime = performance.now();
-        this.fpsRolling = 0;
-        
-        // Hardware state
-        this.hwState = {
-            mcu: { connected: true },
-            wifi: { connected: true },
-            ble: { advertising: true },
-            mic: { level: 0, enabled: false },
-            knob: { state: 'idle' }
-        };
+        try {
+            this.matrix = new Array(TOTAL_PIXELS).fill(null).map(() => ({ r: 0, g: 0, b: 0 }));
+            this.ledElements = [];
+            this.animationId = null;
+            this.brightness = 1.0;
+            this.dialRotation = 0;
+            
+            // WS and Frame metrics
+            this.socket = null;
+            this.frameCounter = 0;
+            this.lastFrameTime = performance.now();
+            this.fpsRolling = 0;
+            
+            // Hardware state
+            this.hwState = {
+                mcu: { connected: true },
+                wifi: { connected: true },
+                ble: { advertising: true },
+                mic: { level: 0, enabled: false },
+                knob: { state: 'idle' }
+            };
 
-        this.initMatrix();
-        this.initControls();
-        this.initWebSocket();
-        this.initKeyboardMappings();
-        this.updateHwStatus();
-        this.render();
+            this.initMatrix();
+            this.initControls();
+            this.initWebSocket();
+            this.initKeyboardMappings();
+            this.updateHwStatus();
+            this.render();
+        } catch (err) {
+            console.error('Error during TC002Emulator initialization:', err);
+        }
     }
 
     initMatrix() {
@@ -620,5 +624,11 @@ class TC002Emulator {
     }
 }
 
-// Instantiate emulator on startup and expose globally
-window.emulator = new TC002Emulator();
+// Initialize and expose to window when DOM is ready
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => {
+        window.emulator = new TC002Emulator();
+    });
+} else {
+    window.emulator = new TC002Emulator();
+}
