@@ -5,6 +5,20 @@ const HEIGHT = 16;
 const TOTAL_PIXELS = WIDTH * HEIGHT;
 const ROW_SIZE = WIDTH * 3; // 3 bytes per pixel in row-major
 
+const FONT_2x3 = {
+    'A': [0x2,0x3,0x3], 'B': [0x3,0x3,0x3], 'C': [0x3,0x2,0x3], 'D': [0x3,0x3,0x3],
+    'E': [0x3,0x2,0x3], 'F': [0x3,0x2,0x2], 'G': [0x3,0x3,0x3], 'H': [0x3,0x3,0x3],
+    'I': [0x2,0x2,0x2], 'J': [0x1,0x3,0x3], 'K': [0x3,0x2,0x3], 'L': [0x2,0x2,0x3],
+    'M': [0x3,0x3,0x3], 'N': [0x3,0x3,0x3], 'O': [0x3,0x3,0x3], 'P': [0x3,0x3,0x2],
+    'Q': [0x3,0x3,0x3], 'R': [0x3,0x3,0x3], 'S': [0x3,0x1,0x3], 'T': [0x3,0x2,0x2],
+    'U': [0x3,0x3,0x3], 'V': [0x3,0x3,0x2], 'W': [0x3,0x3,0x3], 'X': [0x3,0x2,0x3],
+    'Y': [0x3,0x3,0x2], 'Z': [0x3,0x2,0x3],
+    '0': [0x3,0x3,0x3], '1': [0x2,0x2,0x2], '2': [0x3,0x2,0x3], '3': [0x3,0x1,0x3],
+    '4': [0x3,0x3,0x1], '5': [0x3,0x2,0x3], '6': [0x3,0x3,0x3], '7': [0x3,0x1,0x1],
+    '8': [0x3,0x3,0x3], '9': [0x3,0x3,0x3], ' ': [0x0,0x0,0x0], '?': [0x3,0x1,0x2],
+    '!': [0x2,0x2,0x0], '.': [0x0,0x0,0x2]
+};
+
 const FONT_3x5 = {
     'A': [0x4,0xA,0xA,0xE,0xA], 'B': [0xE,0xA,0xE,0xA,0xE], 'C': [0xE,0x8,0x8,0x8,0xE],
     'D': [0xE,0xA,0xA,0xA,0xE], 'E': [0xE,0x8,0xE,0x8,0xE], 'F': [0xE,0x8,0xE,0x8,0x8],
@@ -217,25 +231,32 @@ class TC002Emulator {
             });
         }
 
-        // Font Size physical toggles
-        const btnSmall = document.getElementById('btnFontSmall');
-        const btnLarge = document.getElementById('btnFontLarge');
-        if (btnSmall && btnLarge) {
-            btnSmall.addEventListener('click', () => {
-                this.fontSize = 'small';
-                btnSmall.classList.add('active');
-                btnLarge.classList.remove('active');
-                this.playClickSound('click');
-                this.displayText('static');
-            });
-            btnLarge.addEventListener('click', () => {
-                this.fontSize = 'large';
-                btnLarge.classList.add('active');
-                btnSmall.classList.remove('active');
-                this.playClickSound('click');
-                this.displayText('static');
-            });
-        }
+        // Font Size physical toggles binding
+        const fontBtns = {
+            'mini': document.getElementById('btnFontMini'),
+            'small': document.getElementById('btnFontSmall'),
+            'large': document.getElementById('btnFontLarge'),
+            'huge': document.getElementById('btnFontHuge'),
+            'giant': document.getElementById('btnFontGiant')
+        };
+
+        Object.keys(fontBtns).forEach(size => {
+            const btn = fontBtns[size];
+            if (btn) {
+                btn.addEventListener('click', () => {
+                    this.fontSize = size;
+                    this.playClickSound('click');
+                    
+                    // Toggle active styles on buttons
+                    Object.values(fontBtns).forEach(b => {
+                        if (b) b.classList.remove('active');
+                    });
+                    btn.classList.add('active');
+                    
+                    this.displayText('static');
+                });
+            }
+        });
 
         // Mute Audio toggle binding
         const btnMute = document.getElementById('btnAudioMute');
@@ -585,16 +606,29 @@ class TC002Emulator {
     // Hardware overrides simulation
     simulateMic() {
         this.hwState.mic.enabled = !this.hwState.mic.enabled;
+        
+        // Find the Mic Feed button using querySelector to bind .active class
+        const micBtn = document.querySelector('button[onclick*="simulateMic"]');
+        
+        if (this.micInterval) {
+            clearInterval(this.micInterval);
+            this.micInterval = null;
+        }
+
         if (this.hwState.mic.enabled) {
+            if (micBtn) micBtn.classList.add('active');
             this.addLog('info', 'Microphone level telemetry feed started');
+            this.playClickSound('beep');
+            
+            // Set initial telemetry values
+            this.hwState.mic.level = 45;
+            
             let count = 0;
-            const runFeed = () => {
-                if (!this.hwState.mic.enabled) {
-                    this.addLog('info', 'Microphone telemetry feed stopped');
-                    return;
-                }
-                count += 0.15;
-                const percent = Math.floor(Math.abs(Math.sin(count)) * 100);
+            this.micInterval = setInterval(() => {
+                count += 0.25;
+                const percent = Math.floor(Math.abs(Math.sin(count)) * 75 + Math.random() * 25);
+                this.hwState.mic.level = percent; // Feed visual oscilloscope wave
+                
                 this.addLog('ws-out', `Mic analog level telemetry: ${percent}%`);
                 
                 if (this.socket && this.socket.readyState === WebSocket.OPEN) {
@@ -605,9 +639,12 @@ class TC002Emulator {
                         timestamp: Date.now()
                     }));
                 }
-                setTimeout(runFeed, 1000);
-            };
-            runFeed();
+            }, 1000);
+        } else {
+            if (micBtn) micBtn.classList.remove('active');
+            this.hwState.mic.level = 0;
+            this.addLog('info', 'Microphone telemetry feed stopped');
+            this.playClickSound('click');
         }
     }
 
@@ -689,10 +726,7 @@ class TC002Emulator {
 
         if (bgMode === 'none') {
             this.matrix.fill({ r: 0, g: 0, b: 0 });
-            return;
-        }
-
-        if (bgMode === 'rainbow') {
+        } else if (bgMode === 'rainbow') {
             const time = step * 0.015;
             for (let y = 0; y < HEIGHT; y++) {
                 for (let x = 0; x < WIDTH; x++) {
@@ -729,7 +763,7 @@ class TC002Emulator {
                 this.matrix[index] = {
                     r: Math.floor(brightness * 0.12),
                     g: Math.floor(brightness * 0.12),
-                    b: Math.floor(brightness * 0.16) // Dim slate stars
+                    b: Math.floor(brightness * 0.16)
                 };
             }
         } else if (bgMode === 'grid') {
@@ -779,6 +813,69 @@ class TC002Emulator {
                     }
                 }
             }
+        } else if (bgMode === 'lava') {
+            const time = step * 0.02;
+            for (let y = 0; y < HEIGHT; y++) {
+                for (let x = 0; x < WIDTH; x++) {
+                    const wave = Math.sin(x * 0.2 + time) * Math.cos(y * 0.35 - time * 0.8) + Math.sin(y * 0.1 + time);
+                    const lavaVal = (wave + 2) / 4; 
+                    this.matrix[y * WIDTH + x] = {
+                        r: Math.floor((130 + lavaVal * 125) * 0.08), // Molten glow red
+                        g: Math.floor((lavaVal * 80) * 0.05), // Dim orange yellow
+                        b: 0
+                    };
+                }
+            }
+        } else if (bgMode === 'cyber') {
+            this.matrix.fill({ r: 0, g: 0, b: 0 });
+            for (let y = 0; y < HEIGHT; y++) {
+                for (let x = 0; x < WIDTH; x++) {
+                    const isDot = (x % 4 === 0) && (y % 3 === 0);
+                    if (isDot) {
+                        const sweep = Math.sin(x * 0.15 - step * 0.1) * Math.cos(y * 0.2 + step * 0.05);
+                        if (sweep > 0.45) {
+                            this.matrix[y * WIDTH + x] = {
+                                r: 0,
+                                g: Math.floor(100 * sweep * 0.08),
+                                b: Math.floor(255 * sweep * 0.12) // Tech cyan dots
+                            };
+                        }
+                    }
+                }
+            }
+        }
+
+        // Real-time Composite Soundwave Oscilloscope Wave Overlay when MIC is enabled
+        if (this.hwState.mic.enabled) {
+            const micLevel = this.hwState.mic.level || 40; 
+            const waveAmp = (micLevel / 100) * 6; // Max 6 pixels amplitude height
+
+            for (let x = 0; x < WIDTH; x++) {
+                // Synthesize smooth audio voice waves
+                const waveY = Math.round(HEIGHT / 2 + Math.sin(x * 0.35 + step * 0.4) * Math.cos(x * 0.12 - step * 0.2) * waveAmp);
+                if (waveY >= 0 && waveY < HEIGHT) {
+                    // Bright electric green phosphor neon lines
+                    this.matrix[waveY * WIDTH + x] = { r: 10, g: 190, b: 25 };
+                    
+                    // Soft vertical phosphor halo glow on CRT screen
+                    if (waveY - 1 >= 0) {
+                        const prevIdx = (waveY - 1) * WIDTH + x;
+                        this.matrix[prevIdx] = {
+                            r: Math.min(255, this.matrix[prevIdx].r + 1),
+                            g: Math.min(255, this.matrix[prevIdx].g + 45),
+                            b: Math.min(255, this.matrix[prevIdx].b + 5)
+                        };
+                    }
+                    if (waveY + 1 < HEIGHT) {
+                        const nextIdx = (waveY + 1) * WIDTH + x;
+                        this.matrix[nextIdx] = {
+                            r: Math.min(255, this.matrix[nextIdx].r + 1),
+                            g: Math.min(255, this.matrix[nextIdx].g + 45),
+                            b: Math.min(255, this.matrix[nextIdx].b + 5)
+                        };
+                    }
+                }
+            }
         }
     }
 
@@ -799,13 +896,29 @@ class TC002Emulator {
         if (this.animationId) cancelAnimationFrame(this.animationId);
 
         const chars = text.toUpperCase().split('');
+
+        // Scalable Font Configuration
+        const isMini = size === 'mini';
+        const isSmall = size === 'small';
         const isLarge = size === 'large';
-        const fontMap = isLarge ? FONT_5x7 : FONT_3x5;
-        const charWidth = isLarge ? 6 : 4;
-        const fontCols = isLarge ? 5 : 3;
-        const fontRows = isLarge ? 7 : 5;
-        const fontShift = isLarge ? 4 : 3;
-        const yOffset = isLarge ? Math.floor(HEIGHT / 2) - 3 : Math.floor(HEIGHT / 2) - 2;
+        const isHuge = size === 'huge';
+        const isGiant = size === 'giant';
+
+        // Select base maps
+        const fontMap = isMini ? FONT_2x3 : (isSmall ? FONT_3x5 : FONT_5x7);
+        const fontCols = isMini ? 2 : (isSmall ? 3 : 5);
+        const fontRows = isMini ? 3 : (isSmall ? 5 : 7);
+        const fontShift = isMini ? 1 : (isSmall ? 3 : 4);
+
+        // Dynamically compute dot-matrix interpolation scaling factors
+        let scaleX = 1.0;
+        let scaleY = 1.0;
+        if (isHuge) { scaleX = 1.6; scaleY = 1.8; }
+        if (isGiant) { scaleX = 2.0; scaleY = 2.2; }
+
+        // Layout offset constraints
+        const charWidth = isMini ? 3 : (isSmall ? 4 : (isLarge ? 6 : (isHuge ? 10 : 12)));
+        const yOffset = isMini ? 6 : (isSmall ? 5 : (isLarge ? 4 : (isHuge ? 1 : 0)));
 
         const totalWidth = chars.length * charWidth - 1;
         
@@ -848,41 +961,91 @@ class TC002Emulator {
                 for (let row = 0; row < fontRows; row++) {
                     for (let col = 0; col < fontCols; col++) {
                         if (fontData[row] & (1 << (fontShift - col))) {
-                            const x = roundedOffset + charIndex * charWidth + col;
-                            const y = yOffset + row;
+                            
+                            // Map expansion scales for huge and giant fill modes
+                            const startX = roundedOffset + charIndex * charWidth + Math.floor(col * scaleX);
+                            const endX = roundedOffset + charIndex * charWidth + Math.floor((col + 1) * scaleX);
+                            const startY = yOffset + Math.floor(row * scaleY);
+                            const endY = yOffset + Math.floor((row + 1) * scaleY);
 
-                            let pixelRgb = { ...rgb };
-                            let renderX = x;
-                            let renderY = y;
+                            for (let px = startX; px < endX; px++) {
+                                for (let py = startY; py < endY; py++) {
+                                    
+                                    let pixelRgb = { ...rgb };
+                                    let renderX = px;
+                                    let renderY = py;
 
-                            if (textEffect === 'rainbow') {
-                                const hue = (x / WIDTH + step * 0.02) % 1;
-                                const finalRgb = this.hslToRgb(hue, 1, 0.5);
-                                pixelRgb = { r: finalRgb[0], g: finalRgb[1], b: finalRgb[2] };
-                            } else if (textEffect === 'pulse') {
-                                const pulseFactor = 0.45 + Math.sin(step * 0.3) * 0.55;
-                                pixelRgb = {
-                                    r: Math.floor(rgb.r * pulseFactor),
-                                    g: Math.floor(rgb.g * pulseFactor),
-                                    b: Math.floor(rgb.b * pulseFactor)
-                                };
-                            } else if (textEffect === 'bounce') {
-                                const waveOffset = Math.sin(x * 0.35 + step * 0.3) * 2.2;
-                                renderY = Math.round(y + waveOffset);
-                            } else if (textEffect === 'glitch') {
-                                const glitchActive = (Math.sin(step * 0.5) * Math.cos(step * 0.2) > 0.65);
-                                if (glitchActive) {
-                                    const shift = Math.round(Math.sin(step * 1.8) * 1.5);
-                                    renderX += shift;
+                                    if (textEffect === 'rainbow') {
+                                        const hue = (px / WIDTH + step * 0.02) % 1;
+                                        const finalRgb = this.hslToRgb(hue, 1, 0.5);
+                                        pixelRgb = { r: finalRgb[0], g: finalRgb[1], b: finalRgb[2] };
+                                    } else if (textEffect === 'pulse') {
+                                        const pulseFactor = 0.45 + Math.sin(step * 0.3) * 0.55;
+                                        pixelRgb = {
+                                            r: Math.floor(rgb.r * pulseFactor),
+                                            g: Math.floor(rgb.g * pulseFactor),
+                                            b: Math.floor(rgb.b * pulseFactor)
+                                        };
+                                    } else if (textEffect === 'bounce') {
+                                        const waveOffset = Math.sin(px * 0.35 + step * 0.3) * 2.2;
+                                        renderY = Math.round(py + waveOffset);
+                                    } else if (textEffect === 'glitch') {
+                                        const glitchActive = (Math.sin(step * 0.5) * Math.cos(step * 0.2) > 0.65);
+                                        if (glitchActive) {
+                                            const shift = Math.round(Math.sin(step * 1.8) * 1.5);
+                                            renderX += shift;
+                                        }
+                                        if (Math.random() < 0.008) {
+                                            pixelRgb = { r: 255, g: 255, b: 255 };
+                                        }
+                                    } else if (textEffect === 'fire') {
+                                        // Extinguish and convey upwards convection embers
+                                        const fireOffset = Math.floor(step * 0.5) % 3;
+                                        let wasExtinguished = false;
+
+                                        for (let fy = py; fy >= py - 3; fy--) {
+                                            if (fy >= 0 && fy < HEIGHT) {
+                                                const dist = py - fy;
+                                                const flicker = Math.sin(px * 1.2 + fy * 0.8 + step * 0.5) * Math.cos(px * 0.7 - step * 0.3);
+                                                
+                                                let emberColor = { r: 0, g: 0, b: 0 };
+                                                if (dist === 0) {
+                                                    emberColor = { r: 255, g: 240, b: 200 }; // Intense core
+                                                } else if (dist === 1 && flicker > -0.3) {
+                                                    emberColor = { r: 245, g: 158, b: 11 }; // Amber Yellow
+                                                } else if (dist === 2 && flicker > 0.0) {
+                                                    emberColor = { r: 239, g: 68, b: 68 }; // Red
+                                                } else if (dist === 3 && flicker > 0.4) {
+                                                    emberColor = { r: 100, g: 20, b: 20 }; // Ash
+                                                } else {
+                                                    continue;
+                                                }
+                                                
+                                                if (px >= 0 && px < WIDTH) {
+                                                    this.matrix[fy * WIDTH + px] = emberColor;
+                                                }
+                                            }
+                                        }
+                                        wasExtinguished = true;
+                                        if (wasExtinguished) continue; 
+                                    } else if (textEffect === 'matrixfall') {
+                                        // Filter codes dropping strictly inside characters boundary masks
+                                        const codeFactor = (py + Math.floor(px * 0.8) - Math.floor(step * 6)) % 8;
+                                        if (codeFactor === 0) {
+                                            pixelRgb = { r: 160, g: 255, b: 160 }; // Light drop
+                                        } else if (codeFactor < 4) {
+                                            const fade = (4 - codeFactor) / 4;
+                                            pixelRgb = { r: 0, g: Math.floor(220 * fade), b: 0 };
+                                        } else {
+                                            pixelRgb = { r: 0, g: 20, b: 0 };
+                                        }
+                                    }
+
+                                    if (renderX >= 0 && renderX < WIDTH && renderY >= 0 && renderY < HEIGHT) {
+                                        const index = renderY * WIDTH + renderX;
+                                        this.matrix[index] = pixelRgb;
+                                    }
                                 }
-                                if (Math.random() < 0.008) {
-                                    pixelRgb = { r: 255, g: 255, b: 255 };
-                                }
-                            }
-
-                            if (renderX >= 0 && renderX < WIDTH && renderY >= 0 && renderY < HEIGHT) {
-                                const index = renderY * WIDTH + renderX;
-                                this.matrix[index] = pixelRgb;
                             }
                         }
                     }
@@ -892,7 +1055,7 @@ class TC002Emulator {
             this.render();
 
             const isScrollFinished = (mode === 'scroll' && scrollOffset + totalWidth < 0);
-            const needsActiveLoop = (mode === 'scroll' || textEffect !== 'static' || bgMode !== 'none');
+            const needsActiveLoop = (mode === 'scroll' || textEffect !== 'static' || bgMode !== 'none' || this.hwState.mic.enabled);
 
             if (needsActiveLoop && !isScrollFinished) {
                 this.animationId = requestAnimationFrame(tick);

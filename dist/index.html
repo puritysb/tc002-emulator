@@ -666,7 +666,7 @@
             color: var(--accent-red);
         }
     </style>
-  <script type="module" crossorigin src="/tc002-emulator/assets/index---Tdjfvf.js"></script>
+  <script type="module" crossorigin src="/tc002-emulator/assets/index-BL0ayRGb.js"></script>
 </head>
 <body>
     <header>
@@ -756,32 +756,42 @@
                             <option value="#ffffff" selected>White</option>
                         </select>
                     </div>
-                    <div class="row-flex" style="margin-bottom: 8px; justify-content: space-between;">
-                        <div class="font-size-toggle row-flex" style="gap: 4px; flex: 1;">
-                            <button id="btnFontSmall" class="accent active" title="Small Font (3x5)" style="padding: 8px 10px; font-weight: bold; width: 50%;">A-</button>
-                            <button id="btnFontLarge" class="accent" title="Large Font (5x7)" style="padding: 8px 10px; font-weight: bold; width: 50%;">A+</button>
+                    <div class="row-flex" style="margin-bottom: 8px; flex-direction: column; gap: 4px; align-items: stretch;">
+                        <div class="slider-label" style="font-size: 9px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px;">Device Font Scaler</div>
+                        <div class="font-size-toggle row-flex" style="gap: 3px; width: 100%;">
+                            <button id="btnFontMini" class="accent" title="Mini Font (2x3)" style="padding: 6px 3px; font-size: 8.5px; flex: 1;">Mini</button>
+                            <button id="btnFontSmall" class="accent active" title="Small Font (3x5)" style="padding: 6px 3px; font-size: 8.5px; flex: 1;">Small</button>
+                            <button id="btnFontLarge" class="accent" title="Large Font (5x7)" style="padding: 6px 3px; font-size: 8.5px; flex: 1;">Large</button>
+                            <button id="btnFontHuge" class="accent" title="Huge Font (8x12)" style="padding: 6px 3px; font-size: 8.5px; flex: 1;">Huge</button>
+                            <button id="btnFontGiant" class="accent" title="Giant Font (10x15)" style="padding: 6px 3px; font-size: 8.5px; flex: 1;">Giant</button>
                         </div>
-                        <select id="scrollSpeed" title="Scrolling Text Speed" style="flex: 1.2;">
+                    </div>
+                    <div class="grid-2" style="margin-bottom: 8px;">
+                        <select id="scrollSpeed" title="Scrolling Text Speed">
                             <option value="fast">Fast Speed</option>
                             <option value="medium" selected>Normal Speed</option>
                             <option value="slow">Slow Speed</option>
                         </select>
-                    </div>
-                    <div class="grid-2" style="margin-bottom: 8px;">
                         <select id="textEffect" title="Text Glow & Motion Effects">
                             <option value="static" selected>Plain Color Text</option>
                             <option value="rainbow">Rainbow Drift</option>
                             <option value="pulse">Neon Pulse Glow</option>
                             <option value="bounce">Bounce Wave</option>
                             <option value="glitch">Glitch Noise</option>
+                            <option value="fire">Fire Flame Text</option>
+                            <option value="matrixfall">Matrix Code Fall</option>
                         </select>
-                        <select id="bgMode" title="Background Simulation Layer">
+                    </div>
+                    <div class="grid-2" style="margin-bottom: 8px;">
+                        <select id="bgMode" title="Background Simulation Layer" style="grid-column: span 2;">
                             <option value="none" selected>No Background</option>
                             <option value="rainbow">Dim Rainbow</option>
                             <option value="matrix">Dim Matrix Rain</option>
                             <option value="starfield">Dim Starfield Drift</option>
                             <option value="grid">Dim Neon Grid</option>
                             <option value="equalizer">Dim Spectrum EQ</option>
+                            <option value="lava">Dim Lava Wave</option>
+                            <option value="cyber">Dim Cyber Grid</option>
                         </select>
                     </div>
                     <div class="grid-2">
