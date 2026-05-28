@@ -813,9 +813,9 @@ class TC002Emulator {
                     const hue = (x / WIDTH + y / HEIGHT + time) % 1;
                     const rgb = this.hslToRgb(hue, 1, 0.5);
                     this.matrix[y * WIDTH + x] = {
-                        r: Math.floor(rgb[0] * 0.10), // Dim to 10%
-                        g: Math.floor(rgb[1] * 0.10),
-                        b: Math.floor(rgb[2] * 0.10)
+                        r: Math.floor(rgb[0] * 0.28), // Dim to 28% for beautiful glow
+                        g: Math.floor(rgb[1] * 0.28),
+                        b: Math.floor(rgb[2] * 0.28)
                     };
                 }
             }
@@ -826,7 +826,7 @@ class TC002Emulator {
                     const greenVal = rainFactor > 0.72 ? Math.floor(120 * (rainFactor - 0.72) * 3.5) : 0;
                     this.matrix[y * WIDTH + x] = {
                         r: 0,
-                        g: Math.floor(greenVal * 0.12), // Dim to 12%
+                        g: Math.floor(greenVal * 0.35), // Dim to 35% for clear visual raindrops
                         b: 0
                     };
                 }
@@ -841,9 +841,9 @@ class TC002Emulator {
                 const brightness = Math.floor(120 + Math.sin(step * 0.1 + s) * 60);
                 const index = yVal * WIDTH + xVal;
                 this.matrix[index] = {
-                    r: Math.floor(brightness * 0.12),
-                    g: Math.floor(brightness * 0.12),
-                    b: Math.floor(brightness * 0.16)
+                    r: Math.floor(brightness * 0.28),
+                    g: Math.floor(brightness * 0.28),
+                    b: Math.floor(brightness * 0.38)
                 };
             }
         } else if (bgMode === 'grid') {
@@ -862,9 +862,9 @@ class TC002Emulator {
                     if (isHLine || isVLine) {
                         const distFactor = (y - 7) / (HEIGHT - 7);
                         this.matrix[y * WIDTH + x] = {
-                            r: Math.floor(120 * distFactor * 0.10), // Neon pink
+                            r: Math.floor(120 * distFactor * 0.26), // Neon pink pinks
                             g: 0,
-                            b: Math.floor(180 * distFactor * 0.12)
+                            b: Math.floor(180 * distFactor * 0.32)
                         };
                     }
                 }
@@ -885,9 +885,9 @@ class TC002Emulator {
                             else if (y < 8) { r = 80; g = 80; }
                             
                             this.matrix[index] = {
-                                r: Math.floor(r * 0.10),
-                                g: Math.floor(g * 0.10),
-                                b: Math.floor(b * 0.10)
+                                r: Math.floor(r * 0.28),
+                                g: Math.floor(g * 0.28),
+                                b: Math.floor(b * 0.28)
                             };
                         }
                     }
@@ -900,8 +900,8 @@ class TC002Emulator {
                     const wave = Math.sin(x * 0.2 + time) * Math.cos(y * 0.35 - time * 0.8) + Math.sin(y * 0.1 + time);
                     const lavaVal = (wave + 2) / 4; 
                     this.matrix[y * WIDTH + x] = {
-                        r: Math.floor((130 + lavaVal * 125) * 0.08), // Molten glow red
-                        g: Math.floor((lavaVal * 80) * 0.05), // Dim orange yellow
+                        r: Math.floor((130 + lavaVal * 125) * 0.25), // Molten glow red
+                        g: Math.floor((lavaVal * 80) * 0.15), // Dim orange yellow
                         b: 0
                     };
                 }
@@ -916,8 +916,8 @@ class TC002Emulator {
                         if (sweep > 0.45) {
                             this.matrix[y * WIDTH + x] = {
                                 r: 0,
-                                g: Math.floor(100 * sweep * 0.08),
-                                b: Math.floor(255 * sweep * 0.12) // Tech cyan dots
+                                g: Math.floor(100 * sweep * 0.25),
+                                b: Math.floor(255 * sweep * 0.35) // Tech cyan dots
                             };
                         }
                     }
