@@ -1,64 +1,28 @@
-// TC002 Emulator - Interactive Demo
+// TC002 Emulator
 
 const WIDTH = 52;
 const HEIGHT = 16;
 const TOTAL_PIXELS = WIDTH * HEIGHT;
 
-// 3x5 pixel font (uppercase letters, numbers, basic symbols)
 const FONT_3x5 = {
-    'A': [0x4,0xA,0xA,0xE,0xA],
-    'B': [0xE,0xA,0xE,0xA,0xE],
-    'C': [0xE,0x8,0x8,0x8,0xE],
-    'D': [0xE,0xA,0xA,0xA,0xE],
-    'E': [0xE,0x8,0xE,0x8,0xE],
-    'F': [0xE,0x8,0xE,0x8,0x8],
-    'G': [0xE,0x8,0xE,0xA,0xE],
-    'H': [0xA,0xA,0xE,0xA,0xA],
-    'I': [0xE,0x4,0x4,0x4,0xE],
-    'J': [0xE,0xA,0xA,0xA,0xE],
-    'K': [0xA,0xA,0xE,0xA,0xA],
-    'L': [0x8,0x8,0x8,0x8,0xE],
-    'M': [0x11,0x1B,0xA,0xA,0xA],
-    'N': [0xA,0xE,0xA,0xA,0xA],
-    'O': [0xE,0xA,0xA,0xA,0xE],
-    'P': [0xE,0xA,0xE,0x8,0x8],
-    'Q': [0xE,0xA,0xA,0xA,0xE],
-    'R': [0xE,0xA,0xE,0xA,0xA],
-    'S': [0xE,0x8,0xE,0x2,0xE],
-    'T': [0xE,0x4,0x4,0x4,0x4],
-    'U': [0xA,0xA,0xA,0xA,0xE],
-    'V': [0xA,0xA,0xA,0xA,0x4],
-    'W': [0xA,0xA,0xA,0xF,0x11],
-    'X': [0xA,0xA,0x4,0xA,0xA],
-    'Y': [0xA,0xA,0x4,0x4,0x4],
-    'Z': [0xE,0x2,0x4,0x8,0xE],
-    '0': [0xE,0xA,0xE,0x2,0xE],
-    '1': [0x4,0xC,0x4,0x4,0xE],
-    '2': [0xE,0x2,0xE,0x8,0xE],
-    '3': [0xE,0x2,0xE,0x2,0xE],
-    '4': [0xA,0xA,0xE,0x2,0x2],
-    '5': [0xE,0x8,0xE,0x2,0xE],
-    '6': [0xE,0x8,0xE,0xA,0xE],
-    '7': [0xE,0x2,0x4,0x8,0x8],
-    '8': [0xE,0xA,0xE,0xA,0xE],
-    '9': [0xE,0xA,0xE,0x2,0xE],
-    ' ': [0x0,0x0,0x0,0x0,0x0],
-    '!': [0x4,0x4,0x4,0x0,0x4],
-    '?': [0xE,0x2,0x4,0x0,0x4],
-    '.': [0x0,0x0,0x0,0x0,0x4],
-    ',': [0x0,0x0,0x0,0x4,0x8],
-    '-': [0x0,0x0,0xE,0x0,0x0],
-    '+': [0x0,0x4,0xE,0x4,0x0],
-    '/': [0x2,0x2,0x4,0x8,0x8],
-    ':': [0x0,0x4,0x0,0x4,0x0],
-    '@': [0x6,0x9,0xB,0x9,0x6],
-    '#': [0xA,0xE,0xA,0xE,0xA],
-    '*': [0x4,0xA,0x4,0xA,0x4],
-    '<': [0x8,0x4,0x2,0x4,0x8],
-    '>': [0x2,0x4,0x8,0x4,0x2],
-    '=': [0x0,0xE,0x0,0xE,0x0],
-    '(': [0x4,0x8,0x8,0x8,0x4],
-    ')': [0x8,0x4,0x4,0x4,0x8]
+    'A': [0x4,0xA,0xA,0xE,0xA], 'B': [0xE,0xA,0xE,0xA,0xE], 'C': [0xE,0x8,0x8,0x8,0xE],
+    'D': [0xE,0xA,0xA,0xA,0xE], 'E': [0xE,0x8,0xE,0x8,0xE], 'F': [0xE,0x8,0xE,0x8,0x8],
+    'G': [0xE,0x8,0xE,0xA,0xE], 'H': [0xA,0xA,0xE,0xA,0xA], 'I': [0xE,0x4,0x4,0x4,0xE],
+    'J': [0xE,0xA,0xA,0xA,0xE], 'K': [0xA,0xA,0xE,0xA,0xA], 'L': [0x8,0x8,0x8,0x8,0xE],
+    'M': [0x11,0x1B,0xA,0xA,0xA], 'N': [0xA,0xE,0xA,0xA,0xA], 'O': [0xE,0xA,0xA,0xA,0xE],
+    'P': [0xE,0xA,0xE,0x8,0x8], 'Q': [0xE,0xA,0xA,0xA,0xE], 'R': [0xE,0xA,0xE,0xA,0xA],
+    'S': [0xE,0x8,0xE,0x2,0xE], 'T': [0xE,0x4,0x4,0x4,0x4], 'U': [0xA,0xA,0xA,0xA,0xE],
+    'V': [0xA,0xA,0xA,0xA,0x4], 'W': [0xA,0xA,0xA,0xF,0x11], 'X': [0xA,0xA,0x4,0xA,0xA],
+    'Y': [0xA,0xA,0x4,0x4,0x4], 'Z': [0xE,0x2,0x4,0x8,0xE],
+    '0': [0xE,0xA,0xE,0x2,0xE], '1': [0x4,0xC,0x4,0x4,0xE], '2': [0xE,0x2,0xE,0x8,0xE],
+    '3': [0xE,0x2,0xE,0x2,0xE], '4': [0xA,0xA,0xE,0x2,0x2], '5': [0xE,0x8,0xE,0x2,0xE],
+    '6': [0xE,0x8,0xE,0xA,0xE], '7': [0xE,0x2,0x4,0x8,0x8], '8': [0xE,0xA,0xE,0xA,0xE],
+    '9': [0xE,0xA,0xE,0x2,0xE], ' ': [0x0,0x0,0x0,0x0,0x0], '!': [0x4,0x4,0x4,0x0,0x4],
+    '?': [0xE,0x2,0x4,0x0,0x4], '.': [0x0,0x0,0x0,0x0,0x4], ',': [0x0,0x0,0x0,0x4,0x8],
+    '-': [0x0,0x0,0xE,0x0,0x0], '+': [0x0,0x4,0xE,0x4,0x0], '/': [0x2,0x2,0x4,0x8,0x8],
+    ':': [0x0,0x4,0x0,0x4,0x0], '@': [0x6,0x9,0xB,0x9,0x6], '#': [0xA,0xE,0xA,0xE,0xA],
+    '*': [0x4,0xA,0x4,0xA,0x4], '<': [0x8,0x4,0x2,0x4,0x8], '>': [0x2,0x4,0x8,0x4,0x2],
+    '=': [0x0,0xE,0x0,0xE,0x0], '(': [0x4,0x8,0x8,0x8,0x4], ')': [0x8,0x4,0x4,0x4,0x8]
 };
 
 class TC002Emulator {
@@ -67,76 +31,84 @@ class TC002Emulator {
         this.ledElements = [];
         this.animationId = null;
         this.brightness = 1.0;
-        this.currentEffect = null;
 
         this.initMatrix();
         this.initControls();
+        this.render();
     }
 
     initMatrix() {
         const matrixEl = document.getElementById('matrix');
-        matrixEl.innerHTML = '';
+        if (!matrixEl) return;
 
+        matrixEl.innerHTML = '';
         for (let i = 0; i < TOTAL_PIXELS; i++) {
             const led = document.createElement('div');
             led.className = 'led';
-            led.dataset.index = i;
             matrixEl.appendChild(led);
             this.ledElements.push(led);
         }
     }
 
     initControls() {
-        // Brightness slider
+        // Brightness
         const brightnessSlider = document.getElementById('brightness');
-        brightnessSlider.addEventListener('input', (e) => {
-            this.brightness = e.target.value / 100;
-            document.getElementById('brightnessValue').textContent = e.target.value + '%';
-            this.render();
-        });
+        if (brightnessSlider) {
+            brightnessSlider.addEventListener('input', (e) => {
+                this.brightness = e.target.value / 100;
+                const label = document.getElementById('brightnessValue');
+                if (label) label.textContent = e.target.value + '%';
+                this.render();
+            });
+        }
 
         // File input
         const dropZone = document.getElementById('dropZone');
         const fileInput = document.getElementById('fileInput');
 
-        dropZone.addEventListener('click', () => fileInput.click());
-        dropZone.addEventListener('dragover', (e) => {
-            e.preventDefault();
-            dropZone.classList.add('drag-over');
-        });
-        dropZone.addEventListener('dragleave', () => {
-            dropZone.classList.remove('drag-over');
-        });
-        dropZone.addEventListener('drop', (e) => {
-            e.preventDefault();
-            dropZone.classList.remove('drag-over');
-            const file = e.dataTransfer.files[0];
-            if (file && file.type.startsWith('image/')) {
-                this.loadImage(file);
-            }
-        });
+        if (dropZone && fileInput) {
+            dropZone.addEventListener('click', () => fileInput.click());
+            dropZone.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                dropZone.classList.add('drag-over');
+            });
+            dropZone.addEventListener('dragleave', () => {
+                dropZone.classList.remove('drag-over');
+            });
+            dropZone.addEventListener('drop', (e) => {
+                e.preventDefault();
+                dropZone.classList.remove('drag-over');
+                const file = e.dataTransfer.files[0];
+                if (file && file.type.startsWith('image/')) {
+                    this.loadImage(file);
+                }
+            });
 
-        fileInput.addEventListener('change', (e) => {
-            if (e.target.files[0]) {
-                this.loadImage(e.target.files[0]);
-            }
-        });
+            fileInput.addEventListener('change', (e) => {
+                if (e.target.files[0]) {
+                    this.loadImage(e.target.files[0]);
+                }
+            });
+        }
 
-        // Enter key for text input
-        document.getElementById('textInput').addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') {
-                displayText('static');
-            }
-        });
+        // Text input enter key
+        const textInput = document.getElementById('textInput');
+        if (textInput) {
+            textInput.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') {
+                    this.displayText('static');
+                }
+            });
+        }
     }
 
     loadImage(file) {
         const img = new Image();
-        img.onload = () => {
-            this.drawImageToMatrix(img);
-        };
+        img.onload = () => this.drawImageToMatrix(img);
         img.src = URL.createObjectURL(file);
-        document.getElementById('dropZone').classList.add('active');
+        const dropZone = document.getElementById('dropZone');
+        if (dropZone) dropZone.classList.add('active');
+        this.updateStatus('Image loaded');
     }
 
     drawImageToMatrix(img) {
@@ -144,7 +116,6 @@ class TC002Emulator {
         canvas.width = WIDTH;
         canvas.height = HEIGHT;
         const ctx = canvas.getContext('2d');
-
         ctx.drawImage(img, 0, 0, WIDTH, HEIGHT);
         const imageData = ctx.getImageData(0, 0, WIDTH, HEIGHT);
 
@@ -157,31 +128,31 @@ class TC002Emulator {
             };
         }
         this.render();
-        this.updateStatus('Image loaded');
     }
 
-    drawText(text, color, effect = 'static') {
-        const hexColor = color;
-        const rgb = this.hexToRgb(hexColor);
+    displayText(effect = 'static') {
+        const textInput = document.getElementById('textInput');
+        const colorSelect = document.getElementById('textColor');
+        const text = textInput ? textInput.value || 'HELLO' : 'HELLO';
+        const color = colorSelect ? colorSelect.value : '#3b82f6';
 
-        // Clear matrix
+        const rgb = this.hexToRgb(color);
         this.matrix.fill({ r: 0, g: 0, b: 0 });
 
-        const textUpper = text.toUpperCase();
-        const chars = textUpper.split('');
+        const chars = text.toUpperCase().split('');
         let offsetX = 0;
 
         chars.forEach(char => {
             const fontData = FONT_3x5[char] || FONT_3x5['?'];
-            const charWidth = 4; // 3px + 1px spacing
+            const charWidth = 4;
 
             for (let row = 0; row < 5; row++) {
                 for (let col = 0; col < 3; col++) {
                     if (fontData[row] & (1 << (2 - col))) {
                         const x = offsetX + col;
-                        const y = HEIGHT / 2 - 2 + row;
+                        const y = Math.floor(HEIGHT / 2) - 2 + row;
                         if (x >= 0 && x < WIDTH && y >= 0 && y < HEIGHT) {
-                            const index = Math.floor(y) * WIDTH + Math.floor(x);
+                            const index = y * WIDTH + x;
                             this.matrix[index] = { ...rgb };
                         }
                     }
@@ -202,11 +173,8 @@ class TC002Emulator {
 
     scrollText(text, color) {
         const rgb = this.hexToRgb(color);
-        const textUpper = text.toUpperCase();
-        const chars = textUpper.split('');
+        const chars = text.toUpperCase().split('');
         const charWidth = 4;
-        const totalTextWidth = chars.length * charWidth;
-
         let scrollOffset = WIDTH;
 
         const scroll = () => {
@@ -230,10 +198,10 @@ class TC002Emulator {
                 }
             });
 
-            scrollOffset -= 1;
+            scrollOffset--;
             this.render();
 
-            if (scrollOffset + totalTextWidth > 0) {
+            if (scrollOffset + chars.length * charWidth > 0) {
                 this.animationId = requestAnimationFrame(scroll);
             } else {
                 this.updateStatus('Scroll complete');
@@ -247,19 +215,18 @@ class TC002Emulator {
 
     blinkText(color) {
         const rgb = this.hexToRgb(color);
+        const text = document.getElementById('textInput')?.value || 'HELLO';
         let visible = true;
 
         const blink = () => {
             if (visible) {
-                this.drawText(document.getElementById('textInput').value.toUpperCase(), color, 'static');
+                this.displayText('static');
             } else {
                 this.matrix.fill({ r: 0, g: 0, b: 0 });
                 this.render();
             }
             visible = !visible;
-            this.animationId = requestAnimationFrame(() => {
-                setTimeout(() => blink(), 500);
-            });
+            this.animationId = requestAnimationFrame(() => setTimeout(() => blink(), 400));
         };
 
         if (this.animationId) cancelAnimationFrame(this.animationId);
@@ -268,7 +235,6 @@ class TC002Emulator {
     }
 
     startAnimation(type) {
-        this.currentEffect = type;
         if (this.animationId) cancelAnimationFrame(this.animationId);
 
         const animations = {
@@ -285,12 +251,20 @@ class TC002Emulator {
         }
     }
 
+    stopAnimation() {
+        if (this.animationId) {
+            cancelAnimationFrame(this.animationId);
+            this.animationId = null;
+        }
+        this.matrix.fill({ r: 0, g: 0, b: 0 });
+        this.render();
+        this.updateStatus('Stopped');
+    }
+
     rainbowAnimation() {
         let time = 0;
-
         const animate = () => {
             time += 0.02;
-
             for (let y = 0; y < HEIGHT; y++) {
                 for (let x = 0; x < WIDTH; x++) {
                     const hue = (x / WIDTH + y / HEIGHT + time) % 1;
@@ -298,98 +272,76 @@ class TC002Emulator {
                     this.setPixel(x, y, rgb[0], rgb[1], rgb[2]);
                 }
             }
-
             this.render();
             this.animationId = requestAnimationFrame(animate);
         };
-
         animate();
     }
 
     waveAnimation() {
         let time = 0;
-        const baseHue = 0.6; // Blue
-
         const animate = () => {
             time += 0.05;
-
             for (let y = 0; y < HEIGHT; y++) {
                 for (let x = 0; x < WIDTH; x++) {
                     const wave = Math.sin((x / WIDTH * Math.PI * 2) + time) * 0.5 + 0.5;
-                    const hue = (baseHue + wave * 0.1) % 1;
+                    const hue = 0.6 + wave * 0.1;
                     const lightness = 0.3 + wave * 0.4;
                     const rgb = this.hslToRgb(hue, 0.8, lightness);
                     this.setPixel(x, y, rgb[0], rgb[1], rgb[2]);
                 }
             }
-
             this.render();
             this.animationId = requestAnimationFrame(animate);
         };
-
         animate();
     }
 
     matrixAnimation() {
         const columns = new Array(WIDTH).fill(0).map(() => ({
-            y: Math.random() * HEIGHT,
+            y: Math.random() * -10,
             speed: 0.1 + Math.random() * 0.2,
             length: 3 + Math.floor(Math.random() * 5)
         }));
 
         const animate = () => {
-            // Fade existing
             for (let i = 0; i < TOTAL_PIXELS; i++) {
                 this.matrix[i] = {
-                    r: Math.max(0, this.matrix[i].r - 10),
-                    g: Math.max(0, this.matrix[i].g - 10),
-                    b: Math.max(0, this.matrix[i].b - 10)
+                    r: Math.max(0, this.matrix[i].r - 8),
+                    g: Math.max(0, this.matrix[i].g - 8),
+                    b: Math.max(0, this.matrix[i].b - 8)
                 };
             }
 
-            // Add new raindrops
-            columns.forEach(col => {
+            columns.forEach((col, idx) => {
                 const y = Math.floor(col.y);
                 for (let i = 0; i < col.length; i++) {
                     const py = y - i;
                     if (py >= 0 && py < HEIGHT) {
                         const brightness = 1 - (i / col.length);
-                        const index = py * WIDTH + columns.indexOf(col);
-                        if (this.matrix[index]) {
-                            this.matrix[index] = {
-                                r: 0,
-                                g: Math.floor(200 * brightness),
-                                b: 0
-                            };
-                        }
+                        const index = py * WIDTH + idx;
+                        this.matrix[index] = { r: 0, g: Math.floor(200 * brightness), b: 0 };
                     }
                 }
-
                 col.y += col.speed;
-                if (col.y > HEIGHT + col.length) {
-                    col.y = -col.length;
-                }
+                if (col.y > HEIGHT + col.length) col.y = -col.length;
             });
 
             this.render();
             this.animationId = requestAnimationFrame(animate);
         };
-
         animate();
     }
 
     fireAnimation() {
         const heat = new Array(WIDTH).fill(0).map(() => new Array(HEIGHT).fill(0));
-
         const animate = () => {
-            // Cool down
             for (let x = 0; x < WIDTH; x++) {
                 for (let y = 1; y < HEIGHT; y++) {
                     heat[x][y] = Math.max(0, heat[x][y] - Math.random() * 3);
                 }
             }
 
-            // Rise heat
             for (let x = 0; x < WIDTH; x++) {
                 for (let y = HEIGHT - 2; y >= 0; y--) {
                     const spread = Math.floor(Math.random() * 3) - 1;
@@ -398,18 +350,13 @@ class TC002Emulator {
                 }
             }
 
-            // New heat at bottom
             for (let x = 0; x < WIDTH; x++) {
-                if (Math.random() > 0.5) {
-                    heat[x][0] = 200 + Math.random() * 55;
-                }
+                if (Math.random() > 0.5) heat[x][0] = 200 + Math.random() * 55;
             }
 
-            // Render
             for (let y = 0; y < HEIGHT; y++) {
                 for (let x = 0; x < WIDTH; x++) {
-                    const h = heat[x][y];
-                    const rgb = this.heatToRgb(h);
+                    const rgb = this.heatToRgb(heat[x][y]);
                     this.setPixel(x, y, rgb[0], rgb[1], rgb[2]);
                 }
             }
@@ -417,14 +364,12 @@ class TC002Emulator {
             this.render();
             this.animationId = requestAnimationFrame(animate);
         };
-
         animate();
     }
 
     snowAnimation() {
         const flakes = [];
-
-        for (let i = 0; i < 50; i++) {
+        for (let i = 0; i < 40; i++) {
             flakes.push({
                 x: Math.random() * WIDTH,
                 y: Math.random() * HEIGHT,
@@ -440,9 +385,8 @@ class TC002Emulator {
                 const y = Math.floor(flake.y);
 
                 if (x >= 0 && x < WIDTH && y >= 0 && y < HEIGHT) {
-                    const index = y * WIDTH + x;
                     const brightness = 180 + Math.random() * 75;
-                    this.matrix[index] = { r: brightness, g: brightness, b: brightness };
+                    this.matrix[y * WIDTH + x] = { r: brightness, g: brightness, b: brightness };
                 }
 
                 flake.y += flake.speed;
@@ -457,7 +401,6 @@ class TC002Emulator {
             this.render();
             this.animationId = requestAnimationFrame(animate);
         };
-
         animate();
     }
 
@@ -469,14 +412,13 @@ class TC002Emulator {
 
         switch (type) {
             case 'gradient':
-                const gradient = ctx.createLinearGradient(0, 0, WIDTH, HEIGHT);
-                gradient.addColorStop(0, '#3b82f6');
-                gradient.addColorStop(0.5, '#a855f7');
-                gradient.addColorStop(1, '#ef4444');
-                ctx.fillStyle = gradient;
+                const grad = ctx.createLinearGradient(0, 0, WIDTH, HEIGHT);
+                grad.addColorStop(0, '#3b82f6');
+                grad.addColorStop(0.5, '#a855f7');
+                grad.addColorStop(1, '#ef4444');
+                ctx.fillStyle = grad;
                 ctx.fillRect(0, 0, WIDTH, HEIGHT);
                 break;
-
             case 'checker':
                 const size = 4;
                 for (let y = 0; y < HEIGHT; y += size) {
@@ -486,20 +428,14 @@ class TC002Emulator {
                     }
                 }
                 break;
-
             case 'smile':
-                // Yellow face
                 ctx.fillStyle = '#f59e0b';
                 ctx.beginPath();
                 ctx.arc(WIDTH / 2, HEIGHT / 2, 6, 0, Math.PI * 2);
                 ctx.fill();
-
-                // Eyes
                 ctx.fillStyle = '#000';
                 ctx.fillRect(WIDTH / 2 - 2, HEIGHT / 2 - 1, 1, 1);
                 ctx.fillRect(WIDTH / 2 + 1, HEIGHT / 2 - 1, 1, 1);
-
-                // Smile
                 ctx.beginPath();
                 ctx.arc(WIDTH / 2, HEIGHT / 2, 4, 0.2, Math.PI - 0.2);
                 ctx.strokeStyle = '#000';
@@ -511,17 +447,19 @@ class TC002Emulator {
         const img = new Image();
         img.onload = () => this.drawImageToMatrix(img);
         img.src = canvas.toDataURL();
+        this.updateStatus(`Sample: ${type}`);
     }
 
     setPixel(x, y, r, g, b) {
         if (x < 0 || x >= WIDTH || y < 0 || y >= HEIGHT) return;
-        const index = y * WIDTH + x;
-        this.matrix[index] = { r, g, b };
+        this.matrix[y * WIDTH + x] = { r, g, b };
     }
 
     render() {
         for (let i = 0; i < TOTAL_PIXELS; i++) {
             const led = this.ledElements[i];
+            if (!led) continue;
+
             const color = this.matrix[i];
             const r = Math.min(255, Math.floor(color.r * this.brightness));
             const g = Math.min(255, Math.floor(color.g * this.brightness));
@@ -531,7 +469,7 @@ class TC002Emulator {
             led.style.backgroundColor = `rgb(${r}, ${g}, ${b})`;
 
             if (brightness > 0.3) {
-                led.style.boxShadow = `0 0 ${brightness * 4}px rgb(${r}, ${g}, ${b})`;
+                led.style.boxShadow = `0 0 ${brightness * 3}px rgb(${r}, ${g}, ${b})`;
             } else {
                 led.style.boxShadow = 'none';
             }
@@ -549,7 +487,6 @@ class TC002Emulator {
 
     hslToRgb(h, s, l) {
         let r, g, b;
-
         if (s === 0) {
             r = g = b = l;
         } else {
@@ -561,66 +498,28 @@ class TC002Emulator {
                 if (t < 2/3) return p + (q - p) * (2/3 - t) * 6;
                 return p;
             };
-
             const q = l < 0.5 ? l * (1 + s) : l + s - l * s;
             const p = 2 * l - q;
             r = hue2rgb(p, q, h + 1/3);
             g = hue2rgb(p, q, h);
             b = hue2rgb(p, q, h - 1/3);
         }
-
         return [Math.round(r * 255), Math.round(g * 255), Math.round(b * 255)];
     }
 
     heatToRgb(h) {
         h = Math.min(255, h);
-        if (h < 64) {
-            return [h * 4, 0, 0];
-        } else if (h < 128) {
-            return [255, (h - 64) * 4, 0];
-        } else if (h < 192) {
-            return [255, 255, (h - 128) * 4];
-        } else {
-            return [255, 255, 255];
-        }
+        if (h < 64) return [h * 4, 0, 0];
+        if (h < 128) return [255, (h - 64) * 4, 0];
+        if (h < 192) return [255, 255, (h - 128) * 4];
+        return [255, 255, 255];
     }
 
     updateStatus(text) {
-        document.getElementById('statusText').textContent = text;
-    }
-
-    stopAnimation() {
-        if (this.animationId) {
-            cancelAnimationFrame(this.animationId);
-            this.animationId = null;
-        }
-        this.currentEffect = null;
-        this.matrix.fill({ r: 0, g: 0, b: 0 });
-        this.render();
-        this.updateStatus('Stopped');
+        const statusEl = document.getElementById('statusText');
+        if (statusEl) statusEl.textContent = text;
     }
 }
 
-// Global functions
-let emulator;
-
-function displayText(effect) {
-    const text = document.getElementById('textInput').value || 'HELLO';
-    const color = document.getElementById('textColor').value;
-    emulator.drawText(text, color, effect);
-}
-
-function loadSampleImage(type) {
-    emulator.loadSampleImage(type);
-}
-
-function startAnimation(type) {
-    emulator.startAnimation(type);
-}
-
-function stopAnimation() {
-    emulator.stopAnimation();
-}
-
-// Initialize on load
-emulator = new TC002Emulator();
+// Initialize and expose to window
+window.emulator = new TC002Emulator();

@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>TC002 Emulator - Interactive Demo</title>
+    <title>TC002 Emulator</title>
     <style>
         * {
             margin: 0;
@@ -23,25 +23,22 @@
 
         h1 {
             color: #e0e0e0;
-            margin-bottom: 8px;
-            font-size: 28px;
+            margin-bottom: 4px;
+            font-size: 24px;
         }
 
         .subtitle {
             color: #666;
-            margin-bottom: 24px;
-            font-size: 13px;
+            margin-bottom: 20px;
+            font-size: 12px;
         }
 
-        .main-container {
-            display: flex;
-            gap: 30px;
-            max-width: 1400px;
+        .container {
+            display: grid;
+            grid-template-columns: auto 1fr;
+            gap: 20px;
+            max-width: 1200px;
             width: 100%;
-        }
-
-        .matrix-section {
-            flex: 0 0 auto;
         }
 
         .led-matrix {
@@ -50,96 +47,76 @@
             grid-template-rows: repeat(16, 1fr);
             gap: 1px;
             background: #1a1a2e;
-            padding: 8px;
-            border-radius: 8px;
-            box-shadow: 0 0 40px rgba(0, 0, 0, 0.5);
+            padding: 6px;
+            border-radius: 6px;
+            box-shadow: 0 0 30px rgba(0, 0, 0, 0.5);
         }
 
         .led {
-            width: 8px;
-            height: 8px;
-            border-radius: 2px;
+            width: 6px;
+            height: 6px;
+            border-radius: 1px;
             background: #0f0f1a;
             transition: background-color 0.05s ease;
         }
 
-        .controls-section {
-            flex: 1;
+        .controls {
             display: flex;
             flex-direction: column;
-            gap: 20px;
+            gap: 12px;
         }
 
         .panel {
             background: #1a1a2e;
-            border-radius: 8px;
-            padding: 20px;
+            border-radius: 6px;
+            padding: 14px;
         }
 
         .panel-title {
             color: #888;
-            font-size: 11px;
+            font-size: 10px;
             text-transform: uppercase;
-            letter-spacing: 2px;
-            margin-bottom: 15px;
-            padding-bottom: 10px;
-            border-bottom: 1px solid #2a2a4e;
+            letter-spacing: 1px;
+            margin-bottom: 10px;
         }
 
-        .drop-zone {
-            border: 2px dashed #3a3a6e;
-            border-radius: 8px;
-            padding: 30px;
-            text-align: center;
-            color: #666;
-            cursor: pointer;
-            transition: all 0.3s;
-        }
-
-        .drop-zone:hover, .drop-zone.drag-over {
-            border-color: #4a4a8e;
-            background: #2a2a4e;
-        }
-
-        .drop-zone.active {
-            border-color: #4ade80;
-            background: rgba(74, 222, 128, 0.1);
-        }
-
-        .input-group {
+        .row {
             display: flex;
-            gap: 10px;
-            margin-bottom: 15px;
-        }
-
-        input[type="text"], select {
-            background: #0f0f1a;
-            border: 1px solid #2a2a4e;
-            color: #e0e0e0;
-            padding: 12px 16px;
-            border-radius: 4px;
-            font-family: inherit;
-            font-size: 14px;
+            gap: 8px;
+            flex-wrap: wrap;
         }
 
         input[type="text"] {
             flex: 1;
+            background: #0f0f1a;
+            border: 1px solid #2a2a4e;
+            color: #e0e0e0;
+            padding: 8px 10px;
+            border-radius: 3px;
+            font-family: inherit;
+            font-size: 12px;
+            min-width: 120px;
         }
 
-        input[type="text"]:focus, select:focus {
-            outline: none;
-            border-color: #4a4a8e;
+        select {
+            background: #0f0f1a;
+            border: 1px solid #2a2a4e;
+            color: #e0e0e0;
+            padding: 8px 10px;
+            border-radius: 3px;
+            font-family: inherit;
+            font-size: 12px;
         }
 
         button {
             background: #2a2a4e;
             color: #e0e0e0;
             border: 1px solid #3a3a6e;
-            padding: 12px 20px;
-            border-radius: 4px;
+            padding: 8px 12px;
+            border-radius: 3px;
             cursor: pointer;
             font-family: inherit;
-            font-size: 13px;
+            font-size: 11px;
             transition: all 0.2s;
         }
 
@@ -157,49 +134,42 @@
             background: #5a5a9e;
         }
 
-        .btn-grid {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 8px;
-        }
-
-        .btn-grid button {
-            padding: 10px;
-            font-size: 12px;
-        }
-
-        .color-picker {
-            display: flex;
-            gap: 10px;
-            align-items: center;
-        }
-
-        input[type="color"] {
-            width: 50px;
-            height: 40px;
-            border: none;
+        .drop-zone {
+            border: 2px dashed #3a3a6e;
             border-radius: 4px;
+            padding: 16px;
+            text-align: center;
+            color: #666;
             cursor: pointer;
-            background: transparent;
+            transition: all 0.2s;
+            font-size: 11px;
+        }
+
+        .drop-zone:hover, .drop-zone.drag-over {
+            border-color: #4a4a8e;
+            background: #2a2a4e;
+        }
+
+        .drop-zone.active {
+            border-color: #4ade80;
         }
 
         .slider-group {
-            display: flex;
-            flex-direction: column;
-            gap: 5px;
+            margin-bottom: 10px;
         }
 
         .slider-group label {
             color: #888;
-            font-size: 12px;
+            font-size: 11px;
             display: flex;
             justify-content: space-between;
+            margin-bottom: 4px;
         }
 
         input[type="range"] {
             width: 100%;
-            height: 6px;
-            border-radius: 3px;
+            height: 4px;
+            border-radius: 2px;
             background: #2a2a4e;
             outline: none;
             -webkit-appearance: none;
@@ -207,67 +177,39 @@
 
         input[type="range"]::-webkit-slider-thumb {
             -webkit-appearance: none;
-            width: 16px;
-            height: 16px;
+            width: 12px;
+            height: 12px;
             border-radius: 50%;
             background: #4a4a8e;
             cursor: pointer;
         }
 
-        .info {
-            color: #666;
-            font-size: 11px;
-            line-height: 1.6;
-        }
-
         .status {
-            display: flex;
-            gap: 20px;
-            margin-top: 10px;
-        }
-
-        .status-item {
-            display: flex;
-            align-items: center;
-            gap: 6px;
             color: #666;
-            font-size: 12px;
+            font-size: 10px;
+            margin-top: 8px;
         }
 
-        .status-dot {
-            width: 8px;
-            height: 8px;
-            border-radius: 50%;
-            background: #333;
-        }
-
-        .status-dot.active {
-            background: #4ade80;
-            box-shadow: 0 0 8px #4ade80;
-        }
-
-        @media (max-width: 1200px) {
-            .main-container {
-                flex-direction: column;
+        @media (max-width: 900px) {
+            .container {
+                grid-template-columns: 1fr;
             }
         }
     </style>
 </head>
 <body>
     <h1>TC002 Emulator</h1>
-    <div class="subtitle">Interactive 52×16 RGB LED Matrix Demo</div>
+    <div class="subtitle">52×16 RGB LED Matrix</div>
 
-    <div class="main-container">
-        <div class="matrix-section">
-            <div class="led-matrix" id="matrix"></div>
-        </div>
+    <div class="container">
+        <div class="led-matrix" id="matrix"></div>
 
-        <div class="controls-section">
-            <!-- Text Panel -->
+        <div class="controls">
+            <!-- Text -->
             <div class="panel">
-                <div class="panel-title">Text Display</div>
-                <div class="input-group">
-                    <input type="text" id="textInput" placeholder="Enter text..." value="HELLO">
+                <div class="panel-title">Text</div>
+                <div class="row">
+                    <input type="text" id="textInput" placeholder="Text..." value="HELLO">
                     <select id="textColor">
                         <option value="#3b82f6">Blue</option>
                         <option value="#00c8b4">Teal</option>
@@ -277,61 +219,49 @@
                         <option value="#ffffff">White</option>
                     </select>
                 </div>
-                <div class="btn-grid">
-                    <button onclick="displayText('static')">Static</button>
-                    <button onclick="displayText('scroll')">Scroll</button>
-                    <button onclick="displayText('blink')">Blink</button>
+                <div class="row" style="margin-top: 8px;">
+                    <button onclick="window.emulator.displayText('static')">Static</button>
+                    <button onclick="window.emulator.displayText('scroll')">Scroll</button>
+                    <button onclick="window.emulator.displayText('blink')">Blink</button>
                 </div>
             </div>
 
-            <!-- Image Panel -->
+            <!-- Image -->
             <div class="panel">
-                <div class="panel-title">Image Display</div>
+                <div class="panel-title">Image</div>
                 <div class="drop-zone" id="dropZone">
-                    <div>Drop image here or click to upload</div>
-                    <div style="font-size: 11px; margin-top: 8px;">Supports PNG, JPG, GIF</div>
+                    Drop image or click
                 </div>
                 <input type="file" id="fileInput" accept="image/*" style="display: none;">
-                <div class="btn-grid" style="margin-top: 15px;">
-                    <button onclick="loadSampleImage('gradient')">Gradient</button>
-                    <button onclick="loadSampleImage('checker')">Checker</button>
-                    <button onclick="loadSampleImage('smile')">Smile</button>
+                <div class="row" style="margin-top: 8px;">
+                    <button onclick="window.emulator.loadSampleImage('gradient')">Gradient</button>
+                    <button onclick="window.emulator.loadSampleImage('checker')">Checker</button>
+                    <button onclick="window.emulator.loadSampleImage('smile')">Smile</button>
                 </div>
             </div>
 
-            <!-- Effects Panel -->
+            <!-- Effects -->
             <div class="panel">
-                <div class="panel-title">Effects & Animation</div>
+                <div class="panel-title">Effects</div>
                 <div class="slider-group">
                     <label><span>Brightness</span><span id="brightnessValue">100%</span></label>
                     <input type="range" id="brightness" min="10" max="200" value="100">
                 </div>
-                <div class="btn-grid" style="margin-top: 15px;">
-                    <button onclick="startAnimation('rainbow')">Rainbow</button>
-                    <button onclick="startAnimation('wave')">Wave</button>
-                    <button onclick="startAnimation('matrix')">Matrix</button>
-                    <button onclick="startAnimation('fire')">Fire</button>
-                    <button onclick="startAnimation('snow')">Snow</button>
-                    <button onclick="stopAnimation()">Stop</button>
+                <div class="row">
+                    <button onclick="window.emulator.startAnimation('rainbow')">Rainbow</button>
+                    <button onclick="window.emulator.startAnimation('wave')">Wave</button>
+                    <button onclick="window.emulator.startAnimation('matrix')">Matrix</button>
+                    <button onclick="window.emulator.startAnimation('fire')">Fire</button>
+                    <button onclick="window.emulator.startAnimation('snow')">Snow</button>
+                    <button onclick="window.emulator.stopAnimation()" class="primary">Stop</button>
                 </div>
             </div>
 
-            <!-- Info Panel -->
+            <!-- Info -->
             <div class="panel">
-                <div class="panel-title">Hardware Info</div>
-                <div class="info">
-                    <strong>TC002 Specifications:</strong><br>
-                    • 52×16 RGB LED matrix (832 pixels)<br>
-                    • SPI-driven, ≥15ms frame interval<br>
-                    • Z21 Linux-based SoC<br>
-                    • Wi-Fi + BLE connectivity<br>
-                    • 1 encoder + 3 buttons
-                </div>
                 <div class="status">
-                    <div class="status-item">
-                        <div class="status-dot active" id="animDot"></div>
-                        <span id="statusText">Ready</span>
-                    </div>
+                    <strong>TC002:</strong> 52×16 RGB LED, Z21 Linux SoC, Wi-Fi + BLE<br>
+                    <span id="statusText">Ready</span>
                 </div>
             </div>
         </div>
