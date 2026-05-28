@@ -518,15 +518,16 @@ class TC002Emulator {
         this.matrix.fill({ r: 0, g: 0, b: 0 });
 
         const chars = text.toUpperCase().split('');
-        let offsetX = 0;
+        const charWidth = 4;
+        const totalWidth = chars.length * charWidth - 1; // Subtract 1 for no trailing space after last char
+        let offsetX = Math.max(0, Math.floor((WIDTH - totalWidth) / 2));
 
         chars.forEach(char => {
             const fontData = FONT_3x5[char] || FONT_3x5['?'];
-            const charWidth = 4;
 
             for (let row = 0; row < 5; row++) {
                 for (let col = 0; col < 3; col++) {
-                    if (fontData[row] & (1 << (2 - col))) {
+                    if (fontData[row] & (1 << (3 - col))) {
                         const x = offsetX + col;
                         const y = Math.floor(HEIGHT / 2) - 2 + row;
                         if (x >= 0 && x < WIDTH && y >= 0 && y < HEIGHT) {
@@ -562,7 +563,7 @@ class TC002Emulator {
 
                 for (let row = 0; row < 5; row++) {
                     for (let col = 0; col < 3; col++) {
-                        if (fontData[row] & (1 << (2 - col))) {
+                        if (fontData[row] & (1 << (3 - col))) {
                             const x = scrollOffset + charIndex * charWidth + col;
                             const y = Math.floor(HEIGHT / 2) - 2 + row;
 
