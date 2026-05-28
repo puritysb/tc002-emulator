@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TC002 Emulator - 52×16 LED Matrix</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: #0a0a0f;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+            font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Fira Code', monospace;
+        }
+
+        h1 {
+            color: #e0e0e0;
+            margin-bottom: 20px;
+            font-size: 24px;
+        }
+
+        .emulator-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .led-matrix {
+            display: grid;
+            grid-template-columns: repeat(52, 1fr);
+            grid-template-rows: repeat(16, 1fr);
+            gap: 1px;
+            background: #1a1a2e;
+            padding: 8px;
+            border-radius: 8px;
+            box-shadow: 0 0 40px rgba(0, 0, 0, 0.5);
+        }
+
+        .led {
+            width: 8px;
+            height: 8px;
+            border-radius: 2px;
+            background: #0f0f1a;
+            transition: background-color 0.05s ease;
+        }
+
+        .controls {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            background: #1a1a2e;
+            padding: 20px;
+            border-radius: 8px;
+            min-width: 400px;
+        }
+
+        .control-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .control-group label {
+            color: #888;
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .status {
+            display: flex;
+            gap: 20px;
+            color: #666;
+            font-size: 12px;
+        }
+
+        .status-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #333;
+        }
+
+        .status-dot.connected {
+            background: #4ade80;
+            box-shadow: 0 0 8px #4ade80;
+        }
+
+        button {
+            background: #2a2a4e;
+            color: #e0e0e0;
+            border: 1px solid #3a3a6e;
+            padding: 10px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-family: inherit;
+            font-size: 13px;
+            transition: all 0.2s;
+        }
+
+        button:hover {
+            background: #3a3a6e;
+            border-color: #4a4a8e;
+        }
+
+        .btn-group {
+            display: flex;
+            gap: 10px;
+        }
+
+        input[type="text"] {
+            background: #0f0f1a;
+            border: 1px solid #2a2a4e;
+            color: #e0e0e0;
+            padding: 10px 12px;
+            border-radius: 4px;
+            font-family: inherit;
+            font-size: 13px;
+            width: 100%;
+        }
+
+        input[type="text"]:focus {
+            outline: none;
+            border-color: #4a4a8e;
+        }
+
+        .info {
+            color: #666;
+            font-size: 11px;
+            line-height: 1.5;
+        }
+
+        .knob-controls {
+            display: flex;
+            gap: 10px;
+        }
+
+        .knob-btn {
+            flex: 1;
+            padding: 15px;
+            font-size: 14px;
+        }
+
+        .knob-btn:active {
+            background: #4a4a8e;
+        }
+    </style>
+</head>
+<body>
+    <h1>TC002 Emulator</h1>
+
+    <div class="emulator-container">
+        <div class="led-matrix" id="matrix"></div>
+
+        <div class="controls">
+            <div class="control-group">
+                <label>Connection Status</label>
+                <div class="status">
+                    <div class="status-item">
+                        <div class="status-dot" id="wsDot"></div>
+                        <span>WebSocket</span>
+                    </div>
+                    <div class="status-item">
+                        <span id="fpsCounter">0 FPS</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="control-group">
+                <label>WebSocket URL</label>
+                <input type="text" id="wsUrl" value="ws://localhost:9120/tc002">
+            </div>
+
+            <div class="btn-group">
+                <button id="connectBtn">Connect</button>
+                <button id="disconnectBtn">Disconnect</button>
+                <button id="clearBtn">Clear</button>
+                <button id="testBtn">Test Pattern</button>
+            </div>
+
+            <div class="control-group">
+                <label>Knob & Buttons</label>
+                <div class="knob-controls">
+                    <button class="knob-btn" id="knobCw">旋钮 CW</button>
+                    <button class="knob-btn" id="knobCcw">旋钮 CCW</button>
+                    <button class="knob-btn" id="knobPress">旋钮 Press</button>
+                </div>
+                <div class="knob-controls">
+                    <button class="knob-btn" id="btnLeft">Left</button>
+                    <button class="knob-btn" id="btnMid">Middle</button>
+                    <button class="knob-btn" id="btnRight">Right</button>
+                </div>
+            </div>
+
+            <div class="control-group">
+                <label>Info</label>
+                <div class="info">
+                    TC002: 52×16 RGB LED matrix via SPI<br>
+                    MCU: /dev/ttyS1 @ 1500000 baud<br>
+                    Frame rate limit: ≥15ms interval
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script type="module" src="/src/main.js"></script>
+</body>
+</html>
