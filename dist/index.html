@@ -659,7 +659,7 @@
             color: var(--accent-red);
         }
     </style>
-  <script type="module" crossorigin src="/tc002-emulator/assets/index-NwGXn5Jz.js"></script>
+  <script type="module" crossorigin src="/tc002-emulator/assets/index-smiG4_Ts.js"></script>
 </head>
 <body>
     <header>
@@ -810,15 +810,22 @@
             <!-- Interactive Hardware Emulators -->
             <div class="control-panel">
                 <div class="panel-header">
-                    <span class="panel-title">Hardware Overrides</span>
+                    <span class="panel-title">Device Effects & Controls</span>
+                </div>
+                <div class="grid-2" style="margin-bottom: 10px;">
+                    <button class="accent" onclick="window.emulator.startClockAnimation()">Digital Clock</button>
+                    <button class="accent" onclick="window.emulator.startEqualizerAnimation()">Spectrum EQ</button>
+                </div>
+                <div class="grid-2" style="margin-bottom: 10px;">
+                    <button class="accent" onclick="window.emulator.startPlasmaAnimation()">Plasma Flow</button>
+                    <button class="accent" onclick="window.emulator.simulateMic()">Test MIC Feed</button>
                 </div>
                 <div class="grid-2" style="margin-bottom: 12px;">
                     <button class="accent" onclick="window.emulator.toggleWifi()">WiFi Status</button>
                     <button class="accent" onclick="window.emulator.toggleBle()">BLE Adver.</button>
                 </div>
-                <div class="grid-2">
-                    <button class="accent" onclick="window.emulator.simulateMic()">Test MIC Feed</button>
-                    <button class="primary" onclick="window.emulator.stopAnimation()">Reset Display</button>
+                <div style="width: 100%;">
+                    <button class="primary" onclick="window.emulator.stopAnimation()" style="width: 100%;">Reset Display</button>
                 </div>
             </div>
 

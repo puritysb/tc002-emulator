@@ -50,6 +50,12 @@ class TC002Emulator {
                 knob: { state: 'idle' }
             };
 
+            // Firmware OSD overlay states
+            this.volume = 50;
+            this.isOsdActive = false;
+            this.savedMatrix = null;
+            this.osdTimeout = null;
+
             this.initMatrix();
             this.initControls();
             this.initWebSocket();
@@ -148,21 +154,26 @@ class TC002Emulator {
         }
 
         // Top button caps mouse bindings
-        const setupCapPress = (elId, code) => {
+        const setupCapPress = (elId, code, arrowLeft) => {
             const cap = document.getElementById(elId);
             if (cap) {
                 cap.addEventListener('mousedown', () => {
                     cap.classList.add('active');
                     this.sendKeyEvent(code);
+                    if (arrowLeft !== undefined) {
+                        this.showOSD(() => this.drawArrowOSD(arrowLeft));
+                    } else if (code === 0x05) {
+                        this.showOSD(() => this.drawMenuOSD());
+                    }
                 });
                 cap.addEventListener('mouseup', () => cap.classList.remove('active'));
                 cap.addEventListener('mouseleave', () => cap.classList.remove('active'));
             }
         };
 
-        setupCapPress('leftBtnCap', 0x04);
+        setupCapPress('leftBtnCap', 0x04, true);
         setupCapPress('midBtnCap', 0x05);
-        setupCapPress('rightBtnCap', 0x06);
+        setupCapPress('rightBtnCap', 0x06, false);
     }
 
     // Bi-directional WebSockets Setup
@@ -255,14 +266,17 @@ class TC002Emulator {
                 case 'ArrowLeft':
                     this.flashCapActive('leftBtnCap');
                     this.sendKeyEvent(0x04); // Left
+                    this.showOSD(() => this.drawArrowOSD(true));
                     break;
                 case 'ArrowRight':
                     this.flashCapActive('rightBtnCap');
                     this.sendKeyEvent(0x06); // Right
+                    this.showOSD(() => this.drawArrowOSD(false));
                     break;
                 case 'KeyM':
                     this.flashCapActive('midBtnCap');
                     this.sendKeyEvent(0x05); // Mid
+                    this.showOSD(() => this.drawMenuOSD());
                     break;
                 case 'ArrowUp':
                     this.rotateKnob(true); // CW
@@ -397,6 +411,14 @@ class TC002Emulator {
             }, 100);
         }
 
+        // Adjust volume state
+        if (clockwise) {
+            this.volume = Math.min(100, this.volume + 5);
+        } else {
+            this.volume = Math.max(0, this.volume - 5);
+        }
+        this.showOSD(() => this.drawVolumeOSD());
+
         this.sendKeyEvent(clockwise ? 0x01 : 0x02);
     }
 
@@ -406,6 +428,7 @@ class TC002Emulator {
             knobDial.style.transform = 'translateY(-50%) scale(0.9)';
             setTimeout(() => knobDial.style.transform = 'translateY(-50%)', 100);
         }
+        this.showOSD(() => this.drawVolumeOSD()); // Show current volume level on press
         this.sendKeyEvent(0x03);
     }
 
@@ -450,6 +473,7 @@ class TC002Emulator {
                 this.addLog('err', 'WiFi link dropped. Station unreachable.');
             }
         }
+        this.showOSD(() => this.drawWiFiOSD(this.hwState.wifi.connected));
     }
 
     toggleBle() {
@@ -464,6 +488,7 @@ class TC002Emulator {
                 this.addLog('info', 'BLE Transceiver deactivated.');
             }
         }
+        this.showOSD(() => this.drawBleOSD(this.hwState.ble.advertising));
     }
 
     updateHwStatus() {
@@ -617,15 +642,317 @@ class TC002Emulator {
             const b = Math.min(255, Math.floor(color.b * this.brightness));
             const sum = r + g + b;
 
-            led.style.backgroundColor = `rgb(${r}, ${g}, ${b})`;
-
-            // Generate circular glow drop shadow if the LED is illuminated
-            if (sum > 45) {
-                led.style.boxShadow = `0 0 6px rgba(${r}, ${g}, ${b}, 0.7)`;
-            } else {
-                led.style.boxShadow = 'none';
+            // DOM write caching to prevent shearing and lag
+            const newBg = `rgb(${r}, ${g}, ${b})`;
+            if (led.dataset.color !== newBg) {
+                led.style.backgroundColor = newBg;
+                led.dataset.color = newBg;
+                
+                if (sum > 45) {
+                    led.style.boxShadow = `0 0 6px rgba(${r}, ${g}, ${b}, 0.7)`;
+                } else {
+                    led.style.boxShadow = 'none';
+                }
             }
         }
+    }
+
+    hexToRgb(hex) {
+        const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+        return result ? {
+            r: parseInt(result[1], 16),
+            g: parseInt(result[2], 16),
+            b: parseInt(result[3], 16)
+        } : { r: 255, g: 255, b: 255 };
+    }
+
+    // OSD & Screen Overlay System
+    showOSD(drawFunc) {
+        if (this.osdTimeout) {
+            clearTimeout(this.osdTimeout);
+            this.osdTimeout = null;
+        }
+
+        // Save current matrix state if not currently saved
+        if (!this.savedMatrix) {
+            this.savedMatrix = this.matrix.map(pixel => ({ ...pixel }));
+        }
+
+        this.isOsdActive = true;
+
+        // Clear matrix and draw OSD
+        this.matrix.fill({ r: 0, g: 0, b: 0 });
+        drawFunc();
+        this.render();
+
+        // Restore saved screen after 1.5 seconds
+        this.osdTimeout = setTimeout(() => {
+            if (this.savedMatrix) {
+                this.matrix = this.savedMatrix.map(pixel => ({ ...pixel }));
+                this.savedMatrix = null;
+            }
+            this.isOsdActive = false;
+            this.render();
+        }, 1500);
+    }
+
+    // OSD Drawings
+    drawVolumeOSD() {
+        const rgb = { r: 59, g: 130, b: 246 }; // Blue
+        // Draw Speaker Icon (simple pixel art)
+        const speakerPixels = [
+            [7, 5], [7, 6], [7, 7], [7, 8], [7, 9], [7, 10],
+            [8, 6], [8, 7], [8, 8], [8, 9],
+            [9, 7], [9, 8]
+        ];
+        speakerPixels.forEach(([x, y]) => this.setPixel(x, y, 255, 255, 255));
+
+        // Draw Volume progress bar container
+        const barStartX = 15;
+        const barEndX = 45;
+        const barWidth = barEndX - barStartX;
+        const fillWidth = Math.round((this.volume / 100) * barWidth);
+
+        for (let x = barStartX; x <= barEndX; x++) {
+            this.setPixel(x, 4, 30, 30, 45);
+            this.setPixel(x, 11, 30, 30, 45);
+        }
+        for (let y = 4; y <= 11; y++) {
+            this.setPixel(barStartX, y, 30, 30, 45);
+            this.setPixel(barEndX, y, 30, 30, 45);
+        }
+
+        // Draw progress fill
+        for (let x = barStartX + 1; x < barStartX + fillWidth; x++) {
+            for (let y = 6; y <= 9; y++) {
+                this.setPixel(x, y, rgb.r, rgb.g, rgb.b);
+            }
+        }
+    }
+
+    drawArrowOSD(left) {
+        const rgb = { r: 245, g: 158, b: 11 }; // Amber
+        const cx = Math.floor(WIDTH / 2);
+        const cy = Math.floor(HEIGHT / 2);
+        
+        if (left) {
+            for (let x = cx - 5; x <= cx + 5; x++) {
+                this.setPixel(x, cy, rgb.r, rgb.g, rgb.b);
+            }
+            this.setPixel(cx - 4, cy - 1, rgb.r, rgb.g, rgb.b);
+            this.setPixel(cx - 3, cy - 2, rgb.r, rgb.g, rgb.b);
+            this.setPixel(cx - 4, cy + 1, rgb.r, rgb.g, rgb.b);
+            this.setPixel(cx - 3, cy + 2, rgb.r, rgb.g, rgb.b);
+        } else {
+            for (let x = cx - 5; x <= cx + 5; x++) {
+                this.setPixel(x, cy, rgb.r, rgb.g, rgb.b);
+            }
+            this.setPixel(cx + 4, cy - 1, rgb.r, rgb.g, rgb.b);
+            this.setPixel(cx + 3, cy - 2, rgb.r, rgb.g, rgb.b);
+            this.setPixel(cx + 4, cy + 1, rgb.r, rgb.g, rgb.b);
+            this.setPixel(cx + 3, cy + 2, rgb.r, rgb.g, rgb.b);
+        }
+    }
+
+    drawMenuOSD() {
+        const rgb = { r: 168, g: 85, b: 247 }; // Purple
+        const cx = Math.floor(WIDTH / 2);
+        const cy = Math.floor(HEIGHT / 2);
+        
+        for (let x = cx - 6; x <= cx + 6; x++) {
+            this.setPixel(x, cy - 3, rgb.r, rgb.g, rgb.b);
+            this.setPixel(x, cy, rgb.r, rgb.g, rgb.b);
+            this.setPixel(x, cy + 3, rgb.r, rgb.g, rgb.b);
+        }
+    }
+
+    drawWiFiOSD(connected) {
+        const rgb = connected ? { r: 16, g: 185, b: 129 } : { r: 239, g: 68, b: 68 };
+        const cx = Math.floor(WIDTH / 2);
+        const cy = Math.floor(HEIGHT / 2);
+        
+        this.setPixel(cx, cy + 3, rgb.r, rgb.g, rgb.b);
+        this.setPixel(cx - 2, cy + 1, rgb.r, rgb.g, rgb.b);
+        this.setPixel(cx - 1, cy, rgb.r, rgb.g, rgb.b);
+        this.setPixel(cx, cy, rgb.r, rgb.g, rgb.b);
+        this.setPixel(cx + 1, cy, rgb.r, rgb.g, rgb.b);
+        this.setPixel(cx + 2, cy + 1, rgb.r, rgb.g, rgb.b);
+        
+        this.setPixel(cx - 4, cy - 2, rgb.r, rgb.g, rgb.b);
+        this.setPixel(cx - 3, cy - 3, rgb.r, rgb.g, rgb.b);
+        this.setPixel(cx - 2, cy - 4, rgb.r, rgb.g, rgb.b);
+        this.setPixel(cx - 1, cy - 4, rgb.r, rgb.g, rgb.b);
+        this.setPixel(cx, cy - 4, rgb.r, rgb.g, rgb.b);
+        this.setPixel(cx + 1, cy - 4, rgb.r, rgb.g, rgb.b);
+        this.setPixel(cx + 2, cy - 4, rgb.r, rgb.g, rgb.b);
+        this.setPixel(cx + 3, cy - 3, rgb.r, rgb.g, rgb.b);
+        this.setPixel(cx + 4, cy - 2, rgb.r, rgb.g, rgb.b);
+    }
+
+    drawBleOSD(active) {
+        const rgb = active ? { r: 59, g: 130, b: 246 } : { r: 107, g: 114, b: 128 };
+        const cx = Math.floor(WIDTH / 2);
+        const cy = Math.floor(HEIGHT / 2);
+        
+        for (let y = cy - 5; y <= cy + 5; y++) {
+            this.setPixel(cx, y, rgb.r, rgb.g, rgb.b);
+        }
+        this.setPixel(cx + 1, cy - 4, rgb.r, rgb.g, rgb.b);
+        this.setPixel(cx + 2, cy - 3, rgb.r, rgb.g, rgb.b);
+        this.setPixel(cx + 1, cy - 2, rgb.r, rgb.g, rgb.b);
+        this.setPixel(cx + 1, cy + 4, rgb.r, rgb.g, rgb.b);
+        this.setPixel(cx + 2, cy + 3, rgb.r, rgb.g, rgb.b);
+        this.setPixel(cx + 1, cy + 2, rgb.r, rgb.g, rgb.b);
+        
+        this.setPixel(cx - 1, cy - 3, rgb.r, rgb.g, rgb.b);
+        this.setPixel(cx - 2, cy - 2, rgb.r, rgb.g, rgb.b);
+        this.setPixel(cx - 1, cy + 3, rgb.r, rgb.g, rgb.b);
+        this.setPixel(cx - 2, cy + 2, rgb.r, rgb.g, rgb.b);
+    }
+
+    // Effect Presets
+    startClockAnimation() {
+        if (this.animationId) cancelAnimationFrame(this.animationId);
+        
+        const tick = () => {
+            if (this.isOsdActive) {
+                this.animationId = requestAnimationFrame(tick);
+                return;
+            }
+            
+            this.matrix.fill({ r: 0, g: 0, b: 0 });
+            
+            const now = new Date();
+            const hrs = now.getHours().toString().padStart(2, '0');
+            const mins = now.getMinutes().toString().padStart(2, '0');
+            const secs = now.getSeconds().toString().padStart(2, '0');
+            
+            const clockText = `${hrs}:${mins}:${secs}`;
+            const rgb = { r: 16, g: 185, b: 129 }; // Emerald Green
+            
+            const chars = clockText.split('');
+            const charWidth = 4;
+            const totalWidth = chars.length * charWidth - 1;
+            let offsetX = Math.max(0, Math.floor((WIDTH - totalWidth) / 2));
+            
+            chars.forEach((char) => {
+                const fontData = FONT_3x5[char] || FONT_3x5['?'];
+                for (let row = 0; row < 5; row++) {
+                    for (let col = 0; col < 3; col++) {
+                        if (fontData[row] & (1 << (3 - col))) {
+                            const x = offsetX + col;
+                            const y = Math.floor(HEIGHT / 2) - 2 + row;
+                            if (x >= 0 && x < WIDTH && y >= 0 && y < HEIGHT) {
+                                this.matrix[y * WIDTH + x] = { ...rgb };
+                            }
+                        }
+                    }
+                }
+                offsetX += charWidth;
+            });
+            
+            this.render();
+            this.animationId = requestAnimationFrame(tick);
+        };
+        
+        tick();
+        this.addLog('info', 'Digital Clock effect started');
+    }
+
+    startEqualizerAnimation() {
+        if (this.animationId) cancelAnimationFrame(this.animationId);
+        
+        let offset = 0;
+        const tick = () => {
+            if (this.isOsdActive) {
+                this.animationId = requestAnimationFrame(tick);
+                return;
+            }
+            
+            this.matrix.fill({ r: 0, g: 0, b: 0 });
+            offset += 0.1;
+            
+            for (let c = 0; c < 26; c++) {
+                const x1 = c * 2;
+                const x2 = c * 2 + 1;
+                const val = Math.sin(c * 0.4 + offset) * 0.4 + Math.cos(c * 0.2 - offset) * 0.4 + 0.8;
+                const height = Math.max(1, Math.min(HEIGHT, Math.floor(val * (HEIGHT / 1.6))));
+                
+                for (let y = HEIGHT - 1; y >= HEIGHT - height; y--) {
+                    let r = 0, g = 200, b = 0;
+                    const hFactor = (HEIGHT - 1 - y) / HEIGHT;
+                    if (hFactor > 0.7) {
+                        r = 239; g = 68; b = 68;
+                    } else if (hFactor > 0.4) {
+                        r = 245; g = 158; b = 11;
+                    }
+                    this.matrix[y * WIDTH + x1] = { r, g, b };
+                    this.matrix[y * WIDTH + x2] = { r, g, b };
+                }
+            }
+            
+            this.render();
+            this.animationId = requestAnimationFrame(tick);
+        };
+        
+        tick();
+        this.addLog('info', 'Spectrum Equalizer effect started');
+    }
+
+    startPlasmaAnimation() {
+        if (this.animationId) cancelAnimationFrame(this.animationId);
+        
+        let time = 0;
+        const tick = () => {
+            if (this.isOsdActive) {
+                this.animationId = requestAnimationFrame(tick);
+                return;
+            }
+            
+            time += 0.04;
+            for (let y = 0; y < HEIGHT; y++) {
+                for (let x = 0; x < WIDTH; x++) {
+                    const v1 = Math.sin(x * 0.15 + time);
+                    const v2 = Math.sin(0.15 * (x * Math.sin(time / 2) + y * Math.cos(time / 3)) + time);
+                    const cx = x - WIDTH / 2 + 5 * Math.sin(time / 5);
+                    const cy = y - HEIGHT / 2 + 5 * Math.cos(time / 3);
+                    const v3 = Math.sin(Math.sqrt(cx * cx + cy * cy) * 0.2 + time);
+                    const total = (v1 + v2 + v3) / 3;
+                    
+                    const hue = (total + 1) / 2;
+                    const rgb = this.hslToRgb(hue, 1, 0.5);
+                    this.matrix[y * WIDTH + x] = { r: rgb[0], g: rgb[1], b: rgb[2] };
+                }
+            }
+            
+            this.render();
+            this.animationId = requestAnimationFrame(tick);
+        };
+        
+        tick();
+        this.addLog('info', 'Plasma Wave effect started');
+    }
+
+    hslToRgb(h, s, l) {
+        let r, g, b;
+        if (s === 0) {
+            r = g = b = l;
+        } else {
+            const hue2rgb = (p, q, t) => {
+                if (t < 0) t += 1;
+                if (t > 1) t -= 1;
+                if (t < 1/6) return p + (q - p) * 6 * t;
+                if (t < 1/2) return q;
+                if (t < 2/3) return p + (q - p) * (2/3 - t) * 6;
+                return p;
+            };
+            const q = l < 0.5 ? l * (1 + s) : l + s - l * s;
+            const p = 2 * l - q;
+            r = hue2rgb(p, q, h + 1/3);
+            g = hue2rgb(p, q, h);
+            b = hue2rgb(p, q, h - 1/3);
+        }
+        return [Math.round(r * 255), Math.round(g * 255), Math.round(b * 255)];
     }
 
     hexToRgb(hex) {
