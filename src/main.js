@@ -26,6 +26,49 @@ const FONT_3x5 = {
     '=': [0x0,0xE,0x0,0xE,0x0], '(': [0x4,0x8,0x8,0x8,0x4], ')': [0x8,0x4,0x4,0x4,0x8]
 };
 
+const FONT_5x7 = {
+    'A': [0x04,0x0A,0x11,0x11,0x1F,0x11,0x11],
+    'B': [0x1E,0x11,0x11,0x1E,0x11,0x11,0x1E],
+    'C': [0x0F,0x10,0x10,0x10,0x10,0x10,0x0F],
+    'D': [0x1E,0x11,0x11,0x11,0x11,0x11,0x1E],
+    'E': [0x1F,0x10,0x10,0x1F,0x10,0x10,0x1F],
+    'F': [0x1F,0x10,0x10,0x1F,0x10,0x10,0x10],
+    'G': [0x0F,0x10,0x10,0x17,0x11,0x11,0x0F],
+    'H': [0x11,0x11,0x11,0x1F,0x11,0x11,0x11],
+    'I': [0x0E,0x04,0x04,0x04,0x04,0x04,0x0E],
+    'J': [0x07,0x02,0x02,0x02,0x02,0x12,0x0C],
+    'K': [0x11,0x12,0x14,0x18,0x14,0x12,0x11],
+    'L': [0x10,0x10,0x10,0x10,0x10,0x10,0x1F],
+    'M': [0x11,0x1B,0x15,0x11,0x11,0x11,0x11],
+    'N': [0x11,0x19,0x15,0x13,0x11,0x11,0x11],
+    'O': [0x0E,0x11,0x11,0x11,0x11,0x11,0x0E],
+    'P': [0x1E,0x11,0x11,0x1E,0x10,0x10,0x10],
+    'Q': [0x0E,0x11,0x11,0x11,0x15,0x12,0x0D],
+    'R': [0x1E,0x11,0x11,0x1E,0x14,0x12,0x11],
+    'S': [0x0F,0x10,0x10,0x0E,0x01,0x01,0x1E],
+    'T': [0x1F,0x04,0x04,0x04,0x04,0x04,0x04],
+    'U': [0x11,0x11,0x11,0x11,0x11,0x11,0x0E],
+    'V': [0x11,0x11,0x11,0x11,0x11,0x0A,0x04],
+    'W': [0x11,0x11,0x11,0x15,0x15,0x1B,0x11],
+    'X': [0x11,0x11,0x0A,0x04,0x0A,0x11,0x11],
+    'Y': [0x11,0x11,0x0A,0x04,0x04,0x04,0x04],
+    'Z': [0x1F,0x02,0x04,0x08,0x10,0x10,0x1F],
+    '0': [0x0E,0x11,0x13,0x15,0x19,0x11,0x0E],
+    '1': [0x04,0x0C,0x04,0x04,0x04,0x04,0x0E],
+    '2': [0x0E,0x11,0x02,0x04,0x08,0x10,0x1F],
+    '3': [0x1F,0x02,0x04,0x0E,0x02,0x11,0x0E],
+    '4': [0x02,0x06,0x0A,0x12,0x1F,0x02,0x02],
+    '5': [0x1F,0x10,0x10,0x1E,0x01,0x01,0x1E],
+    '6': [0x0E,0x11,0x10,0x1E,0x11,0x11,0x0E],
+    '7': [0x1F,0x02,0x02,0x04,0x04,0x08,0x08],
+    '8': [0x0E,0x11,0x11,0x0E,0x11,0x11,0x0E],
+    '9': [0x0E,0x11,0x11,0x0F,0x01,0x11,0x0E],
+    ' ': [0x00,0x00,0x00,0x00,0x00,0x00,0x00],
+    '?': [0x0E,0x11,0x02,0x04,0x04,0x00,0x04],
+    '!': [0x04,0x04,0x04,0x04,0x04,0x00,0x04],
+    '.': [0x00,0x00,0x00,0x00,0x00,0x00,0x04]
+};
+
 class TC002Emulator {
     constructor() {
         try {
@@ -34,6 +77,11 @@ class TC002Emulator {
             this.animationId = null;
             this.brightness = 1.0;
             this.dialRotation = 0;
+            
+            // Font and audio states
+            this.fontSize = 'small';
+            this.audioMute = false;
+            this.audioCtx = null;
             
             // WS and Frame metrics
             this.socket = null;
@@ -64,6 +112,66 @@ class TC002Emulator {
             this.render();
         } catch (err) {
             console.error('Error during TC002Emulator initialization:', err);
+        }
+    }
+
+    initAudio() {
+        if (this.audioCtx) return;
+        try {
+            this.audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        } catch (e) {
+            console.warn('Web Audio API is not supported in this environment', e);
+        }
+    }
+
+    playClickSound(type) {
+        if (this.audioMute) return;
+        this.initAudio();
+        if (!this.audioCtx) return;
+
+        if (this.audioCtx.state === 'suspended') {
+            this.audioCtx.resume();
+        }
+
+        const osc = this.audioCtx.createOscillator();
+        const gainNode = this.audioCtx.createGain();
+        osc.connect(gainNode);
+        gainNode.connect(this.audioCtx.destination);
+
+        const now = this.audioCtx.currentTime;
+
+        if (type === 'tick') {
+            // Knob rotation tick sound (extremely short high pitch burst)
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(1400, now);
+            osc.frequency.exponentialRampToValueAtTime(600, now + 0.012);
+            
+            gainNode.gain.setValueAtTime(0.06, now);
+            gainNode.gain.exponentialRampToValueAtTime(0.001, now + 0.012);
+            
+            osc.start(now);
+            osc.stop(now + 0.012);
+        } else if (type === 'click') {
+            // Button click clack sound
+            osc.type = 'triangle';
+            osc.frequency.setValueAtTime(320, now);
+            osc.frequency.exponentialRampToValueAtTime(80, now + 0.03);
+            
+            gainNode.gain.setValueAtTime(0.15, now);
+            gainNode.gain.exponentialRampToValueAtTime(0.001, now + 0.03);
+            
+            osc.start(now);
+            osc.stop(now + 0.03);
+        } else if (type === 'beep') {
+            // Dial press confirmation beep
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(880, now);
+            
+            gainNode.gain.setValueAtTime(0.08, now);
+            gainNode.gain.exponentialRampToValueAtTime(0.001, now + 0.08);
+            
+            osc.start(now);
+            osc.stop(now + 0.08);
         }
     }
 
@@ -105,6 +213,42 @@ class TC002Emulator {
                 } else {
                     screenEl.classList.remove('diffusion');
                     this.addLog('info', 'Acrylic diffusion overlay disabled (Raw matrix view)');
+                }
+            });
+        }
+
+        // Font Size physical toggles
+        const btnSmall = document.getElementById('btnFontSmall');
+        const btnLarge = document.getElementById('btnFontLarge');
+        if (btnSmall && btnLarge) {
+            btnSmall.addEventListener('click', () => {
+                this.fontSize = 'small';
+                btnSmall.classList.add('active');
+                btnLarge.classList.remove('active');
+                this.playClickSound('click');
+                this.displayText('static');
+            });
+            btnLarge.addEventListener('click', () => {
+                this.fontSize = 'large';
+                btnLarge.classList.add('active');
+                btnSmall.classList.remove('active');
+                this.playClickSound('click');
+                this.displayText('static');
+            });
+        }
+
+        // Mute Audio toggle binding
+        const btnMute = document.getElementById('btnAudioMute');
+        if (btnMute) {
+            btnMute.addEventListener('click', () => {
+                this.audioMute = !this.audioMute;
+                if (this.audioMute) {
+                    btnMute.textContent = '🔇';
+                    btnMute.title = 'Sound Muted (Click to unmute)';
+                } else {
+                    btnMute.textContent = '🔊';
+                    btnMute.title = 'Sound Enabled (Mechanical feedback active)';
+                    this.playClickSound('click');
                 }
             });
         }
@@ -159,6 +303,7 @@ class TC002Emulator {
             if (cap) {
                 cap.addEventListener('mousedown', () => {
                     cap.classList.add('active');
+                    this.playClickSound('click');
                     this.sendKeyEvent(code);
                     if (arrowLeft !== undefined) {
                         this.showOSD(() => this.drawArrowOSD(arrowLeft));
@@ -264,16 +409,19 @@ class TC002Emulator {
 
             switch (e.code) {
                 case 'ArrowLeft':
+                    this.playClickSound('click');
                     this.flashCapActive('leftBtnCap');
                     this.sendKeyEvent(0x04); // Left
                     this.showOSD(() => this.drawArrowOSD(true));
                     break;
                 case 'ArrowRight':
+                    this.playClickSound('click');
                     this.flashCapActive('rightBtnCap');
                     this.sendKeyEvent(0x06); // Right
                     this.showOSD(() => this.drawArrowOSD(false));
                     break;
                 case 'KeyM':
+                    this.playClickSound('click');
                     this.flashCapActive('midBtnCap');
                     this.sendKeyEvent(0x05); // Mid
                     this.showOSD(() => this.drawMenuOSD());
@@ -393,6 +541,7 @@ class TC002Emulator {
 
     // Interactive dial operations
     rotateKnob(clockwise) {
+        this.playClickSound('tick');
         // Rotate visual dial element
         const dial = document.getElementById('dialFace');
         this.dialRotation += clockwise ? 20 : -20;
@@ -423,6 +572,7 @@ class TC002Emulator {
     }
 
     triggerKnobPress() {
+        this.playClickSound('beep');
         const knobDial = document.getElementById('knobDial');
         if (knobDial) {
             knobDial.style.transform = 'translateY(-50%) scale(0.9)';
@@ -533,87 +683,228 @@ class TC002Emulator {
         this.render();
     }
 
-    displayText(effect = 'static') {
-        const textInput = document.getElementById('textInput');
-        const colorSelect = document.getElementById('textColor');
-        const text = textInput ? textInput.value || 'HELLO' : 'HELLO';
-        const color = colorSelect ? colorSelect.value : '#ffffff';
+    drawBackground(step) {
+        const bgModeSelect = document.getElementById('bgMode');
+        const bgMode = bgModeSelect ? bgModeSelect.value : 'none';
 
-        const rgb = this.hexToRgb(color);
-        this.matrix.fill({ r: 0, g: 0, b: 0 });
+        if (bgMode === 'none') {
+            this.matrix.fill({ r: 0, g: 0, b: 0 });
+            return;
+        }
 
-        const chars = text.toUpperCase().split('');
-        const charWidth = 4;
-        const totalWidth = chars.length * charWidth - 1; // Subtract 1 for no trailing space after last char
-        let offsetX = Math.max(0, Math.floor((WIDTH - totalWidth) / 2));
-
-        chars.forEach(char => {
-            const fontData = FONT_3x5[char] || FONT_3x5['?'];
-
-            for (let row = 0; row < 5; row++) {
-                for (let col = 0; col < 3; col++) {
-                    if (fontData[row] & (1 << (3 - col))) {
-                        const x = offsetX + col;
-                        const y = Math.floor(HEIGHT / 2) - 2 + row;
-                        if (x >= 0 && x < WIDTH && y >= 0 && y < HEIGHT) {
-                            const index = y * WIDTH + x;
-                            this.matrix[index] = { ...rgb };
+        if (bgMode === 'rainbow') {
+            const time = step * 0.015;
+            for (let y = 0; y < HEIGHT; y++) {
+                for (let x = 0; x < WIDTH; x++) {
+                    const hue = (x / WIDTH + y / HEIGHT + time) % 1;
+                    const rgb = this.hslToRgb(hue, 1, 0.5);
+                    this.matrix[y * WIDTH + x] = {
+                        r: Math.floor(rgb[0] * 0.10), // Dim to 10%
+                        g: Math.floor(rgb[1] * 0.10),
+                        b: Math.floor(rgb[2] * 0.10)
+                    };
+                }
+            }
+        } else if (bgMode === 'matrix') {
+            for (let y = 0; y < HEIGHT; y++) {
+                for (let x = 0; x < WIDTH; x++) {
+                    const rainFactor = (Math.sin(x * 0.5 + step * 0.1) * Math.cos(y * 0.2 + step * 0.05) + 1) / 2;
+                    const greenVal = rainFactor > 0.72 ? Math.floor(120 * (rainFactor - 0.72) * 3.5) : 0;
+                    this.matrix[y * WIDTH + x] = {
+                        r: 0,
+                        g: Math.floor(greenVal * 0.12), // Dim to 12%
+                        b: 0
+                    };
+                }
+            }
+        } else if (bgMode === 'starfield') {
+            this.matrix.fill({ r: 0, g: 0, b: 0 });
+            const numStars = 12;
+            for (let s = 0; s < numStars; s++) {
+                const speed = 0.2 + (Math.sin(s * 45.2) * 0.08);
+                const xVal = Math.floor((s * 17.5 - step * speed) % WIDTH + WIDTH) % WIDTH;
+                const yVal = Math.floor(Math.abs(Math.sin(s * 82.1)) * HEIGHT) % HEIGHT;
+                const brightness = Math.floor(120 + Math.sin(step * 0.1 + s) * 60);
+                const index = yVal * WIDTH + xVal;
+                this.matrix[index] = {
+                    r: Math.floor(brightness * 0.12),
+                    g: Math.floor(brightness * 0.12),
+                    b: Math.floor(brightness * 0.16) // Dim slate stars
+                };
+            }
+        } else if (bgMode === 'grid') {
+            this.matrix.fill({ r: 0, g: 0, b: 0 });
+            for (let y = 8; y < HEIGHT; y++) {
+                const lineSpacing = 8;
+                const speedOffset = (step * 0.22) % lineSpacing;
+                
+                for (let x = 0; x < WIDTH; x++) {
+                    const isHLine = (y - 8 + Math.floor(step * 0.08)) % 3 === 0;
+                    const cx = WIDTH / 2;
+                    const xRel = x - cx;
+                    const angleFactor = xRel / (y - 6);
+                    const isVLine = Math.floor(Math.abs(angleFactor * 12) + speedOffset) % lineSpacing === 0;
+                    
+                    if (isHLine || isVLine) {
+                        const distFactor = (y - 7) / (HEIGHT - 7);
+                        this.matrix[y * WIDTH + x] = {
+                            r: Math.floor(120 * distFactor * 0.10), // Neon pink
+                            g: 0,
+                            b: Math.floor(180 * distFactor * 0.12)
+                        };
+                    }
+                }
+            }
+        } else if (bgMode === 'equalizer') {
+            this.matrix.fill({ r: 0, g: 0, b: 0 });
+            for (let band = 0; band < 13; band++) {
+                const xStart = band * 4;
+                const hVal = Math.sin(band * 0.8 + step * 0.08) * Math.cos(band * 0.3 - step * 0.04) * 0.4 + 0.5;
+                const height = Math.max(1, Math.min(10, Math.floor(hVal * 12)));
+                
+                for (let x = xStart; x < xStart + 3; x++) {
+                    for (let y = HEIGHT - 1; y >= HEIGHT - height; y--) {
+                        const index = y * WIDTH + x;
+                        if (index >= 0 && index < TOTAL_PIXELS) {
+                            let r = 0, g = 100, b = 0;
+                            if (y < 4) { r = 100; g = 0; }
+                            else if (y < 8) { r = 80; g = 80; }
+                            
+                            this.matrix[index] = {
+                                r: Math.floor(r * 0.10),
+                                g: Math.floor(g * 0.10),
+                                b: Math.floor(b * 0.10)
+                            };
                         }
                     }
                 }
             }
-            offsetX += charWidth;
-        });
-
-        if (effect === 'scroll') {
-            this.scrollText(text, color);
-        } else {
-            if (this.animationId) cancelAnimationFrame(this.animationId);
-            this.render();
-            this.addLog('info', `Static text drawn: "${text}"`);
         }
     }
 
-    scrollText(text, color) {
+    displayText(mode = 'static') {
+        const textInput = document.getElementById('textInput');
+        const colorSelect = document.getElementById('textColor');
+        const textEffectSelect = document.getElementById('textEffect');
+        const bgModeSelect = document.getElementById('bgMode');
+        
+        const text = textInput ? textInput.value || 'AGENT DECK' : 'AGENT DECK';
+        const color = colorSelect ? colorSelect.value : '#ffffff';
+        const textEffect = textEffectSelect ? textEffectSelect.value : 'static';
+        const bgMode = bgModeSelect ? bgModeSelect.value : 'none';
+        
+        const size = this.fontSize; 
         const rgb = this.hexToRgb(color);
+
+        if (this.animationId) cancelAnimationFrame(this.animationId);
+
         const chars = text.toUpperCase().split('');
-        const charWidth = 4;
-        let scrollOffset = WIDTH;
+        const isLarge = size === 'large';
+        const fontMap = isLarge ? FONT_5x7 : FONT_3x5;
+        const charWidth = isLarge ? 6 : 4;
+        const fontCols = isLarge ? 5 : 3;
+        const fontRows = isLarge ? 7 : 5;
+        const fontShift = isLarge ? 4 : 3;
+        const yOffset = isLarge ? Math.floor(HEIGHT / 2) - 3 : Math.floor(HEIGHT / 2) - 2;
 
-        const scroll = () => {
-            this.matrix.fill({ r: 0, g: 0, b: 0 });
+        const totalWidth = chars.length * charWidth - 1;
+        
+        // Scroll Speed Throttle
+        const speedSelect = document.getElementById('scrollSpeed');
+        const speed = speedSelect ? speedSelect.value : 'medium';
+        let pixelsPerSecond = 14; 
+        if (speed === 'fast') pixelsPerSecond = 28;
+        if (speed === 'slow') pixelsPerSecond = 7;
 
+        let scrollOffset = mode === 'scroll' ? WIDTH : Math.max(0, Math.floor((WIDTH - totalWidth) / 2));
+        let step = 0;
+        let lastTime = performance.now();
+
+        const tick = () => {
+            const now = performance.now();
+            const deltaTime = (now - lastTime) / 1000;
+            lastTime = now;
+
+            if (this.isOsdActive) {
+                this.animationId = requestAnimationFrame(tick);
+                return;
+            }
+
+            // 1. Draw Background
+            this.drawBackground(step);
+            step += deltaTime * 20;
+
+            // 2. Update Scroll Offset
+            if (mode === 'scroll') {
+                scrollOffset -= deltaTime * pixelsPerSecond;
+            }
+
+            const roundedOffset = Math.round(scrollOffset);
+
+            // 3. Draw Text
             chars.forEach((char, charIndex) => {
-                const fontData = FONT_3x5[char] || FONT_3x5['?'];
+                const fontData = fontMap[char] || fontMap['?'];
 
-                for (let row = 0; row < 5; row++) {
-                    for (let col = 0; col < 3; col++) {
-                        if (fontData[row] & (1 << (3 - col))) {
-                            const x = scrollOffset + charIndex * charWidth + col;
-                            const y = Math.floor(HEIGHT / 2) - 2 + row;
+                for (let row = 0; row < fontRows; row++) {
+                    for (let col = 0; col < fontCols; col++) {
+                        if (fontData[row] & (1 << (fontShift - col))) {
+                            const x = roundedOffset + charIndex * charWidth + col;
+                            const y = yOffset + row;
 
-                            if (x >= 0 && x < WIDTH && y >= 0 && y < HEIGHT) {
-                                const index = y * WIDTH + x;
-                                this.matrix[index] = { ...rgb };
+                            let pixelRgb = { ...rgb };
+                            let renderX = x;
+                            let renderY = y;
+
+                            if (textEffect === 'rainbow') {
+                                const hue = (x / WIDTH + step * 0.02) % 1;
+                                const finalRgb = this.hslToRgb(hue, 1, 0.5);
+                                pixelRgb = { r: finalRgb[0], g: finalRgb[1], b: finalRgb[2] };
+                            } else if (textEffect === 'pulse') {
+                                const pulseFactor = 0.45 + Math.sin(step * 0.3) * 0.55;
+                                pixelRgb = {
+                                    r: Math.floor(rgb.r * pulseFactor),
+                                    g: Math.floor(rgb.g * pulseFactor),
+                                    b: Math.floor(rgb.b * pulseFactor)
+                                };
+                            } else if (textEffect === 'bounce') {
+                                const waveOffset = Math.sin(x * 0.35 + step * 0.3) * 2.2;
+                                renderY = Math.round(y + waveOffset);
+                            } else if (textEffect === 'glitch') {
+                                const glitchActive = (Math.sin(step * 0.5) * Math.cos(step * 0.2) > 0.65);
+                                if (glitchActive) {
+                                    const shift = Math.round(Math.sin(step * 1.8) * 1.5);
+                                    renderX += shift;
+                                }
+                                if (Math.random() < 0.008) {
+                                    pixelRgb = { r: 255, g: 255, b: 255 };
+                                }
+                            }
+
+                            if (renderX >= 0 && renderX < WIDTH && renderY >= 0 && renderY < HEIGHT) {
+                                const index = renderY * WIDTH + renderX;
+                                this.matrix[index] = pixelRgb;
                             }
                         }
                     }
                 }
             });
 
-            scrollOffset--;
             this.render();
 
-            if (scrollOffset + chars.length * charWidth > 0) {
-                this.animationId = requestAnimationFrame(scroll);
+            const isScrollFinished = (mode === 'scroll' && scrollOffset + totalWidth < 0);
+            const needsActiveLoop = (mode === 'scroll' || textEffect !== 'static' || bgMode !== 'none');
+
+            if (needsActiveLoop && !isScrollFinished) {
+                this.animationId = requestAnimationFrame(tick);
             } else {
-                this.addLog('info', 'Text scrolling finished');
+                if (mode === 'scroll') {
+                    this.addLog('info', 'Text scrolling finished');
+                }
             }
         };
 
-        if (this.animationId) cancelAnimationFrame(this.animationId);
-        scroll();
-        this.addLog('info', `Scrolling text started: "${text}"`);
+        tick();
+        this.addLog('info', `${mode.toUpperCase()} text started: "${text}" (Effect: ${textEffect.toUpperCase()}, BG: ${bgMode.toUpperCase()})`);
     }
 
     stopAnimation() {
@@ -810,6 +1101,86 @@ class TC002Emulator {
         this.setPixel(cx - 2, cy + 2, rgb.r, rgb.g, rgb.b);
     }
 
+    startDiagnosticsOSD() {
+        this.addLog('info', 'Hardware self-diagnostics diagnostics active...');
+        
+        let step = 0;
+        let lastTime = performance.now();
+        let scrollOffset = WIDTH;
+        
+        const temp = (38 + Math.random() * 5).toFixed(1);
+        const ram = Math.floor(62 + Math.random() * 15);
+        const diagText = `SYS OK - TEMP: ${temp}C - RAM: ${ram}% - IP: 192.168.1.142 - UPT: ${Math.floor(performance.now()/1000)}S`;
+        
+        const diagLoop = () => {
+            const now = performance.now();
+            const dt = (now - lastTime) / 1000;
+            lastTime = now;
+
+            if (!this.savedMatrix) {
+                this.savedMatrix = this.matrix.map(pixel => ({ ...pixel }));
+            }
+            this.isOsdActive = true;
+            
+            // Draw background Matrix pattern (red/green scan lines)
+            this.matrix.fill({ r: 0, g: 0, b: 0 });
+            step += dt * 30;
+            for (let y = 0; y < HEIGHT; y++) {
+                const scanLine = Math.floor(step + y) % 6 === 0;
+                if (scanLine) {
+                    for (let x = 0; x < WIDTH; x++) {
+                        this.matrix[y * WIDTH + x] = { r: 5, g: 15, b: 5 }; 
+                    }
+                }
+            }
+
+            // Draw diagnostic floating text in amber/red glow
+            const chars = diagText.toUpperCase().split('');
+            const fontMap = FONT_3x5;
+            const charWidth = 4;
+            const fontCols = 3;
+            const fontRows = 5;
+            const fontShift = 3;
+            const yOffset = Math.floor(HEIGHT / 2) - 2;
+
+            scrollOffset -= dt * 15; 
+
+            chars.forEach((char, charIndex) => {
+                const fontData = fontMap[char] || fontMap['?'];
+                for (let row = 0; row < fontRows; row++) {
+                    for (let col = 0; col < fontCols; col++) {
+                        if (fontData[row] & (1 << (fontShift - col))) {
+                            const x = Math.round(scrollOffset) + charIndex * charWidth + col;
+                            const y = yOffset + row;
+                            if (x >= 0 && x < WIDTH && y >= 0 && y < HEIGHT) {
+                                this.matrix[y * WIDTH + x] = { r: 245, g: 130, b: 10 };
+                            }
+                        }
+                    }
+                }
+            });
+
+            this.render();
+
+            if (scrollOffset + chars.length * charWidth > 0) {
+                this.animationId = requestAnimationFrame(diagLoop);
+            } else {
+                if (this.savedMatrix) {
+                    this.matrix = this.savedMatrix.map(pixel => ({ ...pixel }));
+                    this.savedMatrix = null;
+                }
+                this.isOsdActive = false;
+                this.render();
+                this.addLog('info', 'Hardware self-diagnostics completed. Restored displays.');
+                
+                this.displayText('static');
+            }
+        };
+
+        if (this.animationId) cancelAnimationFrame(this.animationId);
+        diagLoop();
+    }
+
     // Effect Presets
     startClockAnimation() {
         if (this.animationId) cancelAnimationFrame(this.animationId);
@@ -953,15 +1324,6 @@ class TC002Emulator {
             b = hue2rgb(p, q, h - 1/3);
         }
         return [Math.round(r * 255), Math.round(g * 255), Math.round(b * 255)];
-    }
-
-    hexToRgb(hex) {
-        const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
-        return result ? {
-            r: parseInt(result[1], 16),
-            g: parseInt(result[2], 16),
-            b: parseInt(result[3], 16)
-        } : { r: 255, g: 255, b: 255 };
     }
 }
 
