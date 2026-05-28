@@ -167,9 +167,22 @@ class TC002Emulator {
 
     // Bi-directional WebSockets Setup
     initWebSocket() {
+        const host = window.location.hostname;
+        const isLocal = ['localhost', '127.0.0.1', '::1'].includes(host) || host.startsWith('192.168.') || host.startsWith('10.') || host.startsWith('172.');
+
+        if (!isLocal) {
+            const valWS = document.getElementById('valWS');
+            if (valWS) {
+                valWS.textContent = 'Demo Mode';
+                valWS.className = 'telemetry-val';
+                valWS.style.color = '#3b82f6'; // Stylized Blue
+            }
+            this.addLog('info', 'Standalone Demo Mode active (WebSocket bridge inactive on public cloud)');
+            return;
+        }
+
         const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-        const host = window.location.host || 'localhost:54200';
-        const wsUrl = `${protocol}//${host}/tc002-emulator/ws`;
+        const wsUrl = `${protocol}//${window.location.host}/tc002-emulator/ws`;
 
         this.addLog('info', `Connecting to WebSocket bridge at ${wsUrl}`);
         
@@ -187,13 +200,13 @@ class TC002Emulator {
             };
 
             this.socket.onclose = () => {
-                this.addLog('err', 'WebSocket bridge connection lost. Retrying in 3s...');
+                this.addLog('err', 'WebSocket bridge connection lost. Retrying in 5s...');
                 const valWS = document.getElementById('valWS');
                 if (valWS) {
                     valWS.textContent = 'Disconnected';
                     valWS.className = 'telemetry-val inactive';
                 }
-                setTimeout(() => this.initWebSocket(), 3000);
+                setTimeout(() => this.initWebSocket(), 5000);
             };
 
             this.socket.onerror = (e) => {
