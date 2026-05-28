@@ -96,6 +96,10 @@ class TC002Emulator {
             this.fontSize = 'small';
             this.audioMute = false;
             this.audioCtx = null;
+            this.micAnalyser = null;
+            this.micStream = null;
+            this.micDataArray = null;
+            this.micSource = null;
             
             // WS and Frame metrics
             this.socket = null;
@@ -136,6 +140,48 @@ class TC002Emulator {
         } catch (e) {
             console.warn('Web Audio API is not supported in this environment', e);
         }
+    }
+
+    async startMicCapture() {
+        this.initAudio();
+        if (!this.audioCtx) return;
+
+        if (this.audioCtx.state === 'suspended') {
+            await this.audioCtx.resume();
+        }
+
+        try {
+            this.micStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+            this.micAnalyser = this.audioCtx.createAnalyser();
+            this.micAnalyser.fftSize = 128;
+            
+            this.micSource = this.audioCtx.createMediaStreamSource(this.micStream);
+            this.micSource.connect(this.micAnalyser);
+            
+            const bufferLength = this.micAnalyser.frequencyBinCount;
+            this.micDataArray = new Uint8Array(bufferLength);
+            
+            this.addLog('info', 'Physical microphone connected. Live audio oscilloscope active.');
+        } catch (err) {
+            console.warn('Physical microphone access denied. Falling back to simulation.', err);
+            this.addLog('err', 'Microphone permission denied. Using virtual soundwave simulator.');
+            this.micAnalyser = null;
+            this.micStream = null;
+        }
+    }
+
+    stopMicCapture() {
+        if (this.micStream) {
+            this.micStream.getTracks().forEach(track => track.stop());
+            this.micStream = null;
+        }
+        if (this.micSource) {
+            this.micSource.disconnect();
+            this.micSource = null;
+        }
+        this.micAnalyser = null;
+        this.micDataArray = null;
+        this.addLog('info', 'Physical microphone feed stopped.');
     }
 
     playClickSound(type) {
@@ -621,14 +667,33 @@ class TC002Emulator {
             this.playClickSound('beep');
             
             // Set initial telemetry values
-            this.hwState.mic.level = 45;
+            this.hwState.mic.level = 30;
+            this.startMicCapture(); // Start actual physical microphone audio stream capture
             
             let count = 0;
             this.micInterval = setInterval(() => {
-                count += 0.25;
-                const percent = Math.floor(Math.abs(Math.sin(count)) * 75 + Math.random() * 25);
-                this.hwState.mic.level = percent; // Feed visual oscilloscope wave
+                let percent = 0;
                 
+                // If actual physical mic analyser node is hooked up
+                if (this.micAnalyser && this.micDataArray) {
+                    this.micAnalyser.getByteTimeDomainData(this.micDataArray);
+                    
+                    // Compute Root Mean Square (RMS) volume power
+                    let sumSquares = 0;
+                    for (let i = 0; i < this.micDataArray.length; i++) {
+                        const val = (this.micDataArray[i] - 128) / 128; // scale from -1.0 to 1.0
+                        sumSquares += val * val;
+                    }
+                    const rms = Math.sqrt(sumSquares / this.micDataArray.length);
+                    // Map typical RMS values (maxing out around 0.5) to full 0-100 scale range
+                    percent = Math.min(100, Math.floor(rms * 180));
+                } else {
+                    // Fallback to virtual soundwave simulation loop
+                    count += 0.25;
+                    percent = Math.floor(Math.abs(Math.sin(count)) * 75 + Math.random() * 25);
+                }
+                
+                this.hwState.mic.level = percent; // Feed real/simulation volume amplitude
                 this.addLog('ws-out', `Mic analog level telemetry: ${percent}%`);
                 
                 if (this.socket && this.socket.readyState === WebSocket.OPEN) {
@@ -642,6 +707,7 @@ class TC002Emulator {
             }, 1000);
         } else {
             if (micBtn) micBtn.classList.remove('active');
+            this.stopMicCapture(); // Terminate stream tracks cleanly
             this.hwState.mic.level = 0;
             this.addLog('info', 'Microphone telemetry feed stopped');
             this.playClickSound('click');
@@ -847,33 +913,34 @@ class TC002Emulator {
 
         // Real-time Composite Soundwave Oscilloscope Wave Overlay when MIC is enabled
         if (this.hwState.mic.enabled) {
-            const micLevel = this.hwState.mic.level || 40; 
-            const waveAmp = (micLevel / 100) * 6; // Max 6 pixels amplitude height
+            const micLevel = this.hwState.mic.level || 30; 
+            
+            // Collect actual sound input signal array
+            let waveData = new Array(WIDTH).fill(0);
+            if (this.micAnalyser && this.micDataArray) {
+                this.micAnalyser.getByteTimeDomainData(this.micDataArray);
+                for (let x = 0; x < WIDTH; x++) {
+                    // Normalize FFT time-domain values (128 is center flat zero)
+                    const dataIdx = Math.floor((x / WIDTH) * this.micDataArray.length);
+                    waveData[x] = (this.micDataArray[dataIdx] - 128) / 128;
+                }
+            } else {
+                // Fallback simulation composite sine waves
+                for (let x = 0; x < WIDTH; x++) {
+                    waveData[x] = Math.sin(x * 0.35 + step * 0.45) * Math.cos(x * 0.12 - step * 0.22) * (micLevel / 100);
+                }
+            }
 
+            const waveAmp = 6.5; // Max 6.5 pixels wave height scaling
             for (let x = 0; x < WIDTH; x++) {
-                // Synthesize smooth audio voice waves
-                const waveY = Math.round(HEIGHT / 2 + Math.sin(x * 0.35 + step * 0.4) * Math.cos(x * 0.12 - step * 0.2) * waveAmp);
+                const waveY = Math.round(HEIGHT / 2 + waveData[x] * waveAmp);
                 if (waveY >= 0 && waveY < HEIGHT) {
-                    // Bright electric green phosphor neon lines
-                    this.matrix[waveY * WIDTH + x] = { r: 10, g: 190, b: 25 };
+                    // Phosphor oscilloscope additive blending overlay
+                    this.blendPixelAdditive(x, waveY, 10, 195, 25);
                     
-                    // Soft vertical phosphor halo glow on CRT screen
-                    if (waveY - 1 >= 0) {
-                        const prevIdx = (waveY - 1) * WIDTH + x;
-                        this.matrix[prevIdx] = {
-                            r: Math.min(255, this.matrix[prevIdx].r + 1),
-                            g: Math.min(255, this.matrix[prevIdx].g + 45),
-                            b: Math.min(255, this.matrix[prevIdx].b + 5)
-                        };
-                    }
-                    if (waveY + 1 < HEIGHT) {
-                        const nextIdx = (waveY + 1) * WIDTH + x;
-                        this.matrix[nextIdx] = {
-                            r: Math.min(255, this.matrix[nextIdx].r + 1),
-                            g: Math.min(255, this.matrix[nextIdx].g + 45),
-                            b: Math.min(255, this.matrix[nextIdx].b + 5)
-                        };
-                    }
+                    // CRT phosphor glow halo blurs
+                    this.blendPixelAdditive(x, waveY - 1, 2, 45, 5);
+                    this.blendPixelAdditive(x, waveY + 1, 2, 45, 5);
                 }
             }
         }
@@ -999,8 +1066,7 @@ class TC002Emulator {
                                             pixelRgb = { r: 255, g: 255, b: 255 };
                                         }
                                     } else if (textEffect === 'fire') {
-                                        // Extinguish and convey upwards convection embers
-                                        const fireOffset = Math.floor(step * 0.5) % 3;
+                                        // Accumulate additive flame convection embers over background
                                         let wasExtinguished = false;
 
                                         for (let fy = py; fy >= py - 3; fy--) {
@@ -1010,9 +1076,9 @@ class TC002Emulator {
                                                 
                                                 let emberColor = { r: 0, g: 0, b: 0 };
                                                 if (dist === 0) {
-                                                    emberColor = { r: 255, g: 240, b: 200 }; // Intense core
+                                                    emberColor = { r: 255, g: 235, b: 180 }; // Core
                                                 } else if (dist === 1 && flicker > -0.3) {
-                                                    emberColor = { r: 245, g: 158, b: 11 }; // Amber Yellow
+                                                    emberColor = { r: 245, g: 158, b: 11 }; // Yellow
                                                 } else if (dist === 2 && flicker > 0.0) {
                                                     emberColor = { r: 239, g: 68, b: 68 }; // Red
                                                 } else if (dist === 3 && flicker > 0.4) {
@@ -1021,29 +1087,34 @@ class TC002Emulator {
                                                     continue;
                                                 }
                                                 
-                                                if (px >= 0 && px < WIDTH) {
-                                                    this.matrix[fy * WIDTH + px] = emberColor;
-                                                }
+                                                // Blend Additive
+                                                this.blendPixelAdditive(px, fy, emberColor.r, emberColor.g, emberColor.b);
                                             }
                                         }
                                         wasExtinguished = true;
                                         if (wasExtinguished) continue; 
                                     } else if (textEffect === 'matrixfall') {
-                                        // Filter codes dropping strictly inside characters boundary masks
+                                        // Masked code rain blended with text colors at 40:60 ratio
                                         const codeFactor = (py + Math.floor(px * 0.8) - Math.floor(step * 6)) % 8;
+                                        let codeColor = { r: 0, g: 20, b: 0 };
+                                        
                                         if (codeFactor === 0) {
-                                            pixelRgb = { r: 160, g: 255, b: 160 }; // Light drop
+                                            codeColor = { r: 160, g: 255, b: 160 }; // Light drop
                                         } else if (codeFactor < 4) {
                                             const fade = (4 - codeFactor) / 4;
-                                            pixelRgb = { r: 0, g: Math.floor(220 * fade), b: 0 };
-                                        } else {
-                                            pixelRgb = { r: 0, g: 20, b: 0 };
+                                            codeColor = { r: 0, g: Math.floor(220 * fade), b: 0 };
                                         }
+                                        
+                                        pixelRgb = {
+                                            r: Math.floor(rgb.r * 0.4 + codeColor.r * 0.6),
+                                            g: Math.floor(rgb.g * 0.4 + codeColor.g * 0.6),
+                                            b: Math.floor(rgb.b * 0.4 + codeColor.b * 0.6)
+                                        };
                                     }
 
                                     if (renderX >= 0 && renderX < WIDTH && renderY >= 0 && renderY < HEIGHT) {
-                                        const index = renderY * WIDTH + renderX;
-                                        this.matrix[index] = pixelRgb;
+                                        // Blend text normally over backgrounds
+                                        this.blendPixel(renderX, renderY, pixelRgb.r, pixelRgb.g, pixelRgb.b, 0.95);
                                     }
                                 }
                             }
@@ -1068,6 +1139,30 @@ class TC002Emulator {
 
         tick();
         this.addLog('info', `${mode.toUpperCase()} text started: "${text}" (Effect: ${textEffect.toUpperCase()}, BG: ${bgMode.toUpperCase()})`);
+    }
+
+    blendPixel(x, y, r, g, b, alpha = 1.0) {
+        if (x < 0 || x >= WIDTH || y < 0 || y >= HEIGHT) return;
+        const index = y * WIDTH + x;
+        const bg = this.matrix[index] || { r: 0, g: 0, b: 0 };
+        
+        this.matrix[index] = {
+            r: Math.min(255, Math.floor(bg.r * (1 - alpha) + r * alpha)),
+            g: Math.min(255, Math.floor(bg.g * (1 - alpha) + g * alpha)),
+            b: Math.min(255, Math.floor(bg.b * (1 - alpha) + b * alpha))
+        };
+    }
+
+    blendPixelAdditive(x, y, r, g, b) {
+        if (x < 0 || x >= WIDTH || y < 0 || y >= HEIGHT) return;
+        const index = y * WIDTH + x;
+        const bg = this.matrix[index] || { r: 0, g: 0, b: 0 };
+        
+        this.matrix[index] = {
+            r: Math.min(255, bg.r + r),
+            g: Math.min(255, bg.g + g),
+            b: Math.min(255, bg.b + b)
+        };
     }
 
     stopAnimation() {
