@@ -127,7 +127,7 @@ class TC002Emulator {
             this.initWebSocket();
             this.initKeyboardMappings();
             this.updateHwStatus();
-            this.render();
+            this.displayText('static');
         } catch (err) {
             console.error('Error during TC002Emulator initialization:', err);
         }
@@ -299,6 +299,18 @@ class TC002Emulator {
                     });
                     btn.classList.add('active');
                     
+                    this.displayText('static');
+                });
+            }
+        });
+
+        // Live preview listeners for Text Generator inputs
+        const liveControls = ['textInput', 'textColor', 'textEffect', 'bgMode', 'scrollSpeed'];
+        liveControls.forEach(id => {
+            const el = document.getElementById(id);
+            if (el) {
+                const eventType = id === 'textInput' ? 'input' : 'change';
+                el.addEventListener(eventType, () => {
                     this.displayText('static');
                 });
             }
@@ -705,12 +717,14 @@ class TC002Emulator {
                     }));
                 }
             }, 1000);
+            this.displayText('static');
         } else {
             if (micBtn) micBtn.classList.remove('active');
             this.stopMicCapture(); // Terminate stream tracks cleanly
             this.hwState.mic.level = 0;
             this.addLog('info', 'Microphone telemetry feed stopped');
             this.playClickSound('click');
+            this.displayText('static');
         }
     }
 
